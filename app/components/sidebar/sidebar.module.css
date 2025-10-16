@@ -1,0 +1,91 @@
+.menuButton {
+  background-color: #000000;
+  border: 2px solid #b8b4d4;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 10px 0px 10px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.menuButton:hover {
+  background-color: #1a1a1a;
+}
+
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hamburger span {
+  width: 25px;
+  height: 3px;
+  background-color: #b8b4d4;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.sidebar {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  top: 0;
+  left: -300px;
+  width: 250px;
+  height: 100vh;
+  background-color: #1a1a1a;
+  border-right: 2px solid #b8b4d4;
+  z-index: 1002;
+  transition: left 0.3s ease;
+  padding: 30px 30px 30px;
+}
+
+.sidebar.open {
+  left: 0;
+}
+
+.closeButton {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #b8b4d4;
+  font-size: 40px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+}
+
+.closeButton:hover {
+  color: #ffffff;
+}
+
+.nav {
+  color: #ffffff;
+  font-size: 24px;
+}
+
+.menu{
+margin-top: 10px;
+margin-bottom: 20px;
+}
+
+.section{
+    font-size: 20px;
+    margin-bottom: 5px;
+}
+
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
