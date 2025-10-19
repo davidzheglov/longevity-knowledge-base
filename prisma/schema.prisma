@@ -12,5 +12,60 @@ model User {
   email     String  @unique
   name      String?
   password  String
+  bio       String?
+  avatarUrl String?
+  education String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+}
+
+model Chat {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  Message[]
+  functionCalls FunctionCall[]
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  chatId    Int
+  userId    Int?
+  role      String
+  content   String
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  functions FunctionCall[]
+  sources   Source[]
+}
+
+model FunctionCall {
+  id         Int      @id @default(autoincrement())
+  chatId     Int
+  messageId  Int?
+  name       String
+  args       String
+  result     String?
+  createdAt  DateTime @default(now())
+
+  chat       Chat     @relation(fields: [chatId], references: [id])
+  message    Message? @relation(fields: [messageId], references: [id])
+  sources    Source[]
+}
+
+model Source {
+  id            Int      @id @default(autoincrement())
+  url           String
+  title         String?
+  snippet       String?
+  fetchedAt     DateTime?
+  messageId     Int?
+  functionCallId Int?
+
+  message       Message? @relation(fields: [messageId], references: [id])
+  functionCall  FunctionCall? @relation(fields: [functionCallId], references: [id])
 }
