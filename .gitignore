@@ -47,3 +47,5 @@ next-env.d.ts
 /dev.db
 # ignore Prisma client build artifacts
 /.prisma
+/prisma/dev.db
+/prisma/migrations
