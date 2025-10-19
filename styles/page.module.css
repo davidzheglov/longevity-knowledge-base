@@ -1,0 +1,7 @@
+.pageContainer { min-height:100vh; background:linear-gradient(180deg,#0f0f18,#0b0b0d); color:#e8e7f3 }
+.topStrip { height:64px; display:flex; align-items:center }
+.mainContainer { display:flex; flex-direction:column; align-items:center; justify-content:center; padding-top:80px }
+.card { background:rgba(255,255,255,0.03); padding:30px 40px; border-radius:12px; border:1px solid #b8b4d4 }
+.title { font-size:34px; margin:0; color:#fff }
+.subtitle { margin-top:12px; color:#cfcbe6 }
+.button { margin-top:18px; padding:12px 20px; background:#b8b4d4; border:none; border-radius:8px; cursor:pointer }

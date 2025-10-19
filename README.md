@@ -24,6 +24,29 @@ The `pages/api` directory is mapped to `/api/*`. Files in this directory are tre
 
 This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Local setup for this project (Prisma + Auth)
+
+1. Copy environment variables and edit `.env`:
+
+```powershell
+Set-Location -Path 'g:\longevity_base\my-app'
+copy .env.example .env
+# Edit .env and set JWT_SECRET
+```
+
+2. Install dependencies, generate the Prisma client, and run migrations:
+
+```powershell
+npm install --no-package-lock
+npx prisma generate
+npx prisma migrate dev --name init
+npm run dev
+```
+
+3. Open http://localhost:3000 and try signup/login. The app uses an HttpOnly JWT cookie named `token` for auth.
+
+If you prefer Postgres or MySQL, update `DATABASE_URL` in `.env` and adjust `prisma/schema.prisma` if needed.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

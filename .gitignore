@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Prisma artifacts (local dev)
+# ignore the SQLite file(s) and journal
+/prisma/dev.db
+/prisma/dev.db-journal
+/dev.db
+# ignore Prisma client build artifacts
+/.prisma
