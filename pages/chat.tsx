@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/sidebar/Sidebar';
+import DNAField from '@/components/hero/DNAField';
 import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
 import MessageInput from '@/components/chat/MessageInput';
@@ -20,6 +21,25 @@ export default function ChatPage(){
   const [thinking, setThinking] = useState(false);
 
   useEffect(()=>{ fetch('/api/auth/me').then(r=>r.json()).then(d=>{ if (d?.user){ setMe(d.user); fetch('/api/profile').then(r=>r.json()).then(p=> setProfile(p.user || profile)).catch(()=>{}); } }); fetch('/api/chats').then(r=>r.json()).then(setChats) },[]);
+  // When page loads, only fetch persisted chats if the user is authenticated.
+  useEffect(()=>{
+    (async ()=>{
+      try{
+        const meRes = await fetch('/api/auth/me');
+        const meJson = await meRes.json();
+        if (meJson?.user){ setMe(meJson.user); try{ const p = await (await fetch('/api/profile')).json(); setProfile(p.user || profile); }catch(e){};
+        // fetch persisted chats for authenticated user
+        const chatsRes = await fetch('/api/chats');
+        const chatsJson = await chatsRes.json();
+        setChats(chatsJson || []);
+        return;
+        }
+      }catch(e){ /* ignore */ }
+      // visitors: start with empty ephemeral chat list stored in-memory/localStorage
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('ephemeral_chats') : null;
+      if (saved) setChats(JSON.parse(saved));
+    })();
+  },[]);
 
   useEffect(()=>{
     if (!activeChat) return;
@@ -27,17 +47,36 @@ export default function ChatPage(){
   },[activeChat]);
 
   async function createChat(){
-    const res = await fetch('/api/chats',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title: 'New Chat' }) });
-    const chat = await res.json();
-    setChats((c)=>[chat,...c]);
-    setActiveChat(chat);
-    setMessages([]);
+    if (me){
+      const res = await fetch('/api/chats',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title: 'New Chat' }) });
+      if (!res.ok) return;
+      const chat = await res.json();
+      setChats((c)=>[chat,...c]);
+      setActiveChat(chat);
+      setMessages([]);
+    } else {
+      // create ephemeral local chat for visitors
+      const chat = { id: Date.now(), title: 'Guest Chat' };
+      const next = [chat, ...chats];
+      setChats(next);
+      setActiveChat(chat);
+      setMessages([]);
+      localStorage.setItem('ephemeral_chats', JSON.stringify(next));
+    }
   }
 
   async function deleteChat(id:number){
-    await fetch(`/api/chats/${id}`,{ method:'DELETE' });
-    setChats((c)=>c.filter(x=>x.id!==id));
-    if (activeChat?.id===id) setActiveChat(null);
+    if (me){
+      await fetch(`/api/chats/${id}`,{ method:'DELETE' });
+      setChats((c)=>c.filter(x=>x.id!==id));
+      if (activeChat?.id===id) setActiveChat(null);
+    } else {
+      // remove ephemeral local chat
+      const next = chats.filter(x=>x.id!==id);
+      setChats(next);
+      localStorage.setItem('ephemeral_chats', JSON.stringify(next));
+      if (activeChat?.id===id) setActiveChat(null);
+    }
   }
 
   async function send(){
@@ -72,9 +111,15 @@ export default function ChatPage(){
   return (
     <div className="min-h-screen">
       <div className="bg-slate-900/30 border-b border-slate-800"><Sidebar/></div>
-      <main className="p-6 grid grid-cols-12 gap-6">
+      <main className="p-6 grid grid-cols-12 gap-6 relative">
+        {/* right-side DNA animation for chat page */}
+        <div className="col-span-12 pointer-events-none">
+          <div className="absolute right-6 top-24 w-80 h-80 -z-20 pointer-events-none">
+            <DNAField anchor="right" animationPath="/animations/dna3.json" />
+          </div>
+        </div>
         <aside className="col-span-3">
-          <ChatList chats={chats} activeId={activeChat?.id||null} onSelect={(c)=>setActiveChat(c)} onCreate={createChat} onDelete={deleteChat} />
+          <ChatList chats={chats} activeId={activeChat?.id||null} onSelect={(c: Chat) => setActiveChat(c)} onCreate={createChat} onDelete={deleteChat} />
         </aside>
 
         <section className="col-span-6 flex flex-col">
@@ -86,7 +131,7 @@ export default function ChatPage(){
           <div className="flex-1">
             {activeChat ? (
               <>
-                <ChatWindow messages={messages.concat(thinking? [{ id: -1, role: 'assistant', content: '...' }]:[])} />
+                <ChatWindow messages={(Array.isArray(messages) ? messages : []).concat(thinking ? [{ id: -1, role: 'assistant', content: '...' }] : [])} />
                 {thinking && <div className="text-sm text-slate-400 mt-2">Assistant is thinking...</div>}
                 <MessageInput value={input} onChange={setInput} onSend={send} />
               </>

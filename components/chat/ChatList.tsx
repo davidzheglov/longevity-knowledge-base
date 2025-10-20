@@ -1,26 +1,75 @@
 "use client";
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import styles from './chat.module.css';
+import MagneticButton from '@/components/ui/MagneticButton';
 
-type Chat = { id: number; title?: string };
+export default function ChatList({ sessions: initial = null, activeId, onSelect = ()=>{}, onCreate = ()=>{}, onDelete = ()=>{} , onNewFocus, onLoaded = (s:any)=>{} }: any){
+  const [sessions, setSessions] = useState<any[] | null>(initial);
+  const [loading, setLoading] = useState(false);
 
-export default function ChatList({ chats, activeId, onSelect, onCreate, onDelete }:
-  { chats: Chat[]; activeId?: number | null; onSelect: (c: Chat)=>void; onCreate: ()=>void; onDelete: (id:number)=>void }){
+  useEffect(()=>{
+    let mounted = true;
+    async function load(){
+      if (initial !== null) return; // parent provided list
+      setLoading(true);
+      try{
+        const res = await fetch('/api/chats', { credentials: 'include' });
+        if (res.ok){
+          const data = await res.json();
+          if (!mounted) return;
+          // Accept either an array response or an object { chats: [...] }
+          const list = Array.isArray(data) ? data : (Array.isArray(data?.chats) ? data.chats : []);
+          setSessions(list);
+          onLoaded(list);
+        } else {
+          // fallback to sessionStorage for guests
+          const raw = sessionStorage.getItem('visitor_chats');
+          const list = raw ? JSON.parse(raw) : [];
+          if (!mounted) return;
+          setSessions(list);
+          onLoaded(list);
+        }
+      }catch(err){
+        const raw = sessionStorage.getItem('visitor_chats');
+        const list = raw ? JSON.parse(raw) : [];
+        if (!mounted) return;
+        setSessions(list);
+        onLoaded(list);
+      }finally{ if (mounted) setLoading(false); }
+    }
+    load();
+    return ()=>{ mounted = false; };
+  },[initial]);
+
+  const list = sessions || [];
+
   return (
-    <div className="w-72 bg-gradient-to-b from-slate-800/60 to-slate-900/40 p-4 rounded-xl shadow-lg backdrop-blur-md">
+    <div>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold">Chats</h3>
-        <button onClick={onCreate} className="text-sm bg-primary px-3 py-1 rounded-full hover:brightness-110 transition">New</button>
+        <h3 className="text-lg font-semibold">Sessions</h3>
+        <MagneticButton variant="primary" onClick={async ()=>{ onCreate(); onNewFocus && onNewFocus(); }}>{'New Chat'}</MagneticButton>
       </div>
-      <ul className="space-y-2 max-h-[60vh] overflow-auto">
-        {chats.map(c=> (
-          <li key={c.id} className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition hover:bg-slate-700/40 ${activeId===c.id? 'bg-slate-700/60 ring-1 ring-primary/60':''}`}>
-            <button className="text-left flex-1 truncate" onClick={()=>onSelect(c)}>{c.title || `Chat ${c.id}`}</button>
-            <div className="flex items-center gap-2">
-              <button onClick={()=>onDelete(c.id)} className="text-xs text-rose-400 hover:text-rose-300">Delete</button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className={styles.sessions}>
+        <AnimatePresence>
+          {list.map((s:any)=> (
+            <motion.div key={s.id} layout initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-6 }} className={`p-3 rounded-lg cursor-pointer group relative ${activeId===s.id? 'ring-1 ring-primary/40':''}`} onClick={()=> onSelect(s)}>
+              <div className="font-semibold">{s.title || `Chat ${s.id}`}</div>
+              <div className="text-sm text-slate-400">{s.preview || 'No messages yet'}</div>
+
+              <button
+                aria-label={`Delete chat ${s.id}`}
+                onClick={(e)=>{ e.stopPropagation(); onDelete(s.id); }}
+                className="absolute right-2 top-2 text-sm text-slate-300 bg-slate-800/40 p-1 rounded opacity-70 hover:opacity-100"
+                title="Delete chat"
+              >
+                🗑️
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        {loading && <div className="text-sm text-slate-400 p-2">Loading…</div>}
+      </div>
     </div>
-  )
+  );
 }

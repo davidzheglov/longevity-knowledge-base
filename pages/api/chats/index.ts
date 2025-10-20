@@ -12,13 +12,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const userId = getUserIdFromReq(req);
 
   if (req.method === 'GET') {
-    const where = userId ? { where: { userId } } : {} as any;
-    const chats = await prisma.chat.findMany({ ...(where as any), orderBy: { updatedAt: 'desc' } });
+    // Only return persisted chats for authenticated users.
+    if (!userId) return res.json([]);
+    const chats = await prisma.chat.findMany({ where: { userId }, orderBy: { updatedAt: 'desc' } });
     return res.json(chats);
   }
   if (req.method === 'POST') {
     const { title } = req.body;
-    const chat = await prisma.chat.create({ data: { userId: userId || undefined, title } });
+    // Visitors cannot create persisted chats. Require authentication to persist chat history.
+    if (!userId) return res.status(401).json({ error: 'Authentication required to create chats' });
+    const chat = await prisma.chat.create({ data: { userId, title } });
     return res.status(201).json(chat);
   }
   return res.status(405).end();
