@@ -2,9 +2,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 
-type Props = { accentColor?: string; onSpeedChange?: (s:number)=>void; animationPath?: string };
+type Props = { accentColor?: string; onSpeedChange?: (s:number)=>void; animationPath?: string; width?: string | number; height?: string | number };
 
-export default function DNAField({ accentColor = '#7c3aed', onSpeedChange, animationPath = '/animations/dna.json', anchor = 'full' }: Props & { anchor?: 'full'|'right' }){
+export default function DNAField({ accentColor = '#7c3aed', onSpeedChange, animationPath = '/animations/dna.json', anchor = 'full', width, height }: Props & { anchor?: 'full'|'right'|'inline' }){
   const rotate = useMotionValue(0);
   const [speed, setSpeed] = useState(1);
   const smooth = useSpring(rotate, { stiffness: 120, damping: 18 });
@@ -58,10 +58,15 @@ export default function DNAField({ accentColor = '#7c3aed', onSpeedChange, anima
   function onEnter(){ setSpeed(s=>Math.min(6, s + 2)); }
   function onLeave(){ setSpeed(1); }
 
-  // Use absolute positioning within the page container so the animation sits behind content
-  const wrapperStyle: React.CSSProperties | undefined = anchor === 'right'
-    ? { position:'absolute', right:0, top:0, height:'100%', width:'40vw', pointerEvents: 'none', zIndex: 0 }
-    : { position:'absolute', inset:0, pointerEvents: 'none', zIndex: 0 };
+  // Positioning variants: full-page background, right-side panel, or inline compact
+  let wrapperStyle: React.CSSProperties | undefined;
+  if (anchor === 'inline'){
+    wrapperStyle = { position: 'relative', width: width || 140, height: height || 140, pointerEvents: 'none', zIndex: 0 };
+  } else if (anchor === 'right'){
+    wrapperStyle = { position:'absolute', right:0, top:0, height:'100%', width:'40vw', pointerEvents: 'none', zIndex: 0 };
+  } else {
+    wrapperStyle = { position:'absolute', inset:0, pointerEvents: 'none', zIndex: 0 };
+  }
 
   return (
     <div ref={ref} style={wrapperStyle} onMouseEnter={onEnter} onMouseMove={(e)=>{
@@ -77,7 +82,7 @@ export default function DNAField({ accentColor = '#7c3aed', onSpeedChange, anima
 
       {LottieComponent && lottieData ? (
         // render Lottie animation
-        <div className="w-full h-full opacity-90">
+        <div style={{ width: '100%', height: '100%', opacity: anchor === 'inline' ? 0.9 : 0.9 }}>
           <LottieComponent lottieRef={lottieRef} animationData={lottieData} loop={true} autoplay={true} style={{ width: '100%', height: '100%' }} />
         </div>
       ) : (

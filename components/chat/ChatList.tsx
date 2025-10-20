@@ -10,8 +10,13 @@ export default function ChatList({ sessions: initial = null, activeId, onSelect 
 
   useEffect(()=>{
     let mounted = true;
+    // If parent provided an explicit list, always reflect it immediately
+    if (initial !== null){
+      setSessions(initial);
+      return () => { mounted = false; };
+    }
+
     async function load(){
-      if (initial !== null) return; // parent provided list
       setLoading(true);
       try{
         const res = await fetch('/api/chats', { credentials: 'include' });
@@ -59,7 +64,12 @@ export default function ChatList({ sessions: initial = null, activeId, onSelect 
 
               <button
                 aria-label={`Delete chat ${s.id}`}
-                onClick={(e)=>{ e.stopPropagation(); onDelete(s.id); }}
+                onClick={(e)=>{ e.stopPropagation();
+                  // Optimistically remove from local list for instant UI feedback
+                  setSessions(prev => (prev||[]).filter(x=> x.id !== s.id));
+                  try{ sessionStorage.setItem('visitor_chats', JSON.stringify((sessions||[]).filter(x=> x.id !== s.id))); }catch(e){}
+                  onDelete(s.id);
+                }}
                 className="absolute right-2 top-2 text-sm text-slate-300 bg-slate-800/40 p-1 rounded opacity-70 hover:opacity-100"
                 title="Delete chat"
               >

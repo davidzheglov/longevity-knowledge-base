@@ -130,11 +130,13 @@ export default function ChatPage(){
         <aside className={styles.right}>
           <div className="p-4">
             <ProfilePanel profile={{ name: me?.name || 'Guest', bio: me?.bio || 'Log in to see your profile', education: me?.education || '', avatarUrl: me?.avatarUrl || '' }} />
+
+            {/* compact DNA decorative under the profile */}
+            <div className="mt-6 flex justify-center">
+              <DNAField anchor="inline" animationPath="/animations/dna3.json" width={120} height={120} />
+            </div>
           </div>
         </aside>
-
-        {/* chat-only DNA decorative */}
-        <DNAField anchor="right" animationPath="/animations/dna3.json" />
       </main>
     </div>
   );

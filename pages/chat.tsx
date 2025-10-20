@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/sidebar/Sidebar';
-import DNAField from '@/components/hero/DNAField';
+import SideDNA from '@/components/chat/SideDNA';
 import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
 import MessageInput from '@/components/chat/MessageInput';
@@ -112,12 +112,7 @@ export default function ChatPage(){
     <div className="min-h-screen">
       <div className="bg-slate-900/30 border-b border-slate-800"><Sidebar/></div>
       <main className="p-6 grid grid-cols-12 gap-6 relative">
-        {/* right-side DNA animation for chat page */}
-        <div className="col-span-12 pointer-events-none">
-          <div className="absolute right-6 top-24 w-80 h-80 -z-20 pointer-events-none">
-            <DNAField anchor="right" animationPath="/animations/dna3.json" />
-          </div>
-        </div>
+        {/* removed full-background DNA animation; small SideDNA placed under profile below */}
         <aside className="col-span-3">
           <ChatList chats={chats} activeId={activeChat?.id||null} onSelect={(c: Chat) => setActiveChat(c)} onCreate={createChat} onDelete={deleteChat} />
         </aside>
@@ -143,6 +138,11 @@ export default function ChatPage(){
 
         <aside className="col-span-3">
           <ProfilePanel profile={profile} />
+          <div className="p-4">
+            <div className="mt-4 flex justify-center">
+              <SideDNA />
+            </div>
+          </div>
         </aside>
       </main>
     </div>
