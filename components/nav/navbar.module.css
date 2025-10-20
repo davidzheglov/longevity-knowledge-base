@@ -3,7 +3,7 @@
   top:0;
   z-index:1200;
   backdrop-filter: blur(8px);
-  background: linear-gradient(180deg, rgba(10,11,13,0.6), rgba(10,11,13,0.4));
+  background: linear-gradient(90deg, rgba(88, 28, 135, 0.6), rgba(109, 40, 217, 0.4));
   border-bottom: 1px solid rgba(255,255,255,0.04);
   box-shadow: 0 6px 24px rgba(2,6,23,0.4);
 }

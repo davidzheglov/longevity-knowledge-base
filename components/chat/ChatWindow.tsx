@@ -25,7 +25,7 @@ export default function ChatWindow({ messages } : { messages: Message[] }){
 
   // If there are few messages or react-virtuoso is not desired, the Virtuoso still performs well.
   return (
-    <div className="p-6 rounded-xl bg-gradient-to-b from-slate-900/40 to-slate-900/20 shadow-inner h-[60vh]">
+    <div className="p-6 rounded-xl bg-gradient-to-b from-slate-900/40 to-slate-900/20 shadow-inner h-[60vh] border border-white/30">
       {messages.length === 0 ? (
         <div className="text-center text-slate-400 mt-8">No messages yet. Say hi 👋</div>
       ) : (

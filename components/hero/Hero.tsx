@@ -27,10 +27,22 @@ export default function Hero(){
 
         <div className="mt-6 flex items-center gap-4 justify-center">
           <Link href="/chat">
-            <MagneticButton variant="primary" icon={<MessageSquare size={16} />}>Open Chat</MagneticButton>
+            <motion.button
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 transition-all"
+               whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}>
+              Open Chat</motion.button>
           </Link>
           <Link href="/proteins">
-            <MagneticButton variant="ghost" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 2v4h10V2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6v9.5a4 4 0 0 0 4 4h0a4 4 0 0 0 4-4V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}>Browse Proteins</MagneticButton>
+            <motion.button
+              className="px-6 py-3 bg-transparent border border-slate-600 text-slate-300 rounded-lg font-medium flex items-center gap-2 transition-all hover:border-slate-400 hover:text-white cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 2v4h10V2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M8 6v9.5a4 4 0 0 0 4 4h0a4 4 0 0 0 4-4V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Browse Proteins</motion.button>
           </Link>
         </div>
 

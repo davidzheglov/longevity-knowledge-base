@@ -3,8 +3,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import styles from './magnetic.module.css';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 
-export default function MagneticButton({ children, icon, onClick, href, variant = 'primary', ...rest }:
-  { children: React.ReactNode; icon?: React.ReactNode; onClick?: ()=>void; href?: string; variant?: 'primary'|'ghost'|'glass' } & any){
+export default function MagneticButton({ children, icon, onClick, href, variant = 'primary', boundarySelector, ...rest }:
+  { children: React.ReactNode; icon?: React.ReactNode; onClick?: ()=>void; href?: string; variant?: 'primary'|'ghost'|'glass'; boundarySelector?: string } & any){
   const ref = useRef<HTMLButtonElement|null>(null);
   const [hover, setHover] = useState(false);
   const x = useMotionValue(0);
@@ -15,6 +15,26 @@ export default function MagneticButton({ children, icon, onClick, href, variant 
   useEffect(()=>{
     function onMove(e: MouseEvent){
       const el = ref.current; if (!el) return;
+
+      if (boundarySelector) {
+        const boundary = document.querySelector(boundarySelector);
+        if (boundary) {
+          const boundaryRect = boundary.getBoundingClientRect();
+          const isInBoundary = 
+            e.clientX >= boundaryRect.left &&
+            e.clientX <= boundaryRect.right &&
+            e.clientY >= boundaryRect.top &&
+            e.clientY <= boundaryRect.bottom;
+          
+          if (!isInBoundary) {
+            x.set(0);
+            y.set(0);
+            return;
+          }
+        }
+      }
+
+
       const r = el.getBoundingClientRect();
       const dx = e.clientX - (r.left + r.width/2);
       const dy = e.clientY - (r.top + r.height/2);

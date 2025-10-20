@@ -48,6 +48,15 @@ export default function ProfilePanel({ profile: initialProfile, onUpdated }:{ pr
     setSaving(false);
   }
 
+  async function onLogout(){
+    try{
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      setProfile(null);
+      onUpdated && onUpdated(null as any);
+      window.location.href = '/';
+    }catch(e){ console.error(e) }
+  }
+
   async function onDeleteAccount(){
     if (!profile?.email) return;
     const confirm = window.prompt(`Type your email (${profile.email}) to confirm deletion`);
@@ -111,10 +120,19 @@ export default function ProfilePanel({ profile: initialProfile, onUpdated }:{ pr
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <label className="text-xs bg-slate-700/40 px-2 py-1 rounded cursor-pointer">
-          Change Avatar
-          <input type="file" accept="image/*" onChange={onFile} className="hidden" />
-        </label>
+        {!edit ? (
+          <button 
+            onClick={onLogout}
+            className="text-xs bg-slate-700/40 px-2 py-1 rounded cursor-pointer hover:bg-slate-600/40 transition-colors"
+          >
+            Logout
+          </button>
+        ) : (
+          <label className="text-xs bg-slate-700/40 px-2 py-1 rounded cursor-pointer hover:bg-slate-600/40 transition-colors">
+            Change Avatar
+            <input type="file" accept="image/*" onChange={onFile} className="hidden" />
+          </label>
+        )}
         <div className="flex items-center gap-2">
           {!edit ? (
             <MagneticButton onClick={()=>{ setEdit(true); setForm(profile); }} variant="primary">Edit</MagneticButton>

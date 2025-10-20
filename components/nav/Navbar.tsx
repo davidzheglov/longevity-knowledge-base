@@ -5,6 +5,7 @@ import MagneticButton from '@/components/ui/MagneticButton';
 import { Layers, GitBranch, FileText, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CommandPalette, { openCommandPalette } from '@/components/CommandPalette';
+import Link from 'next/link';
 
 const proteins = [ 'SIRT1','mTOR','FOXO3','AMPK','IGF1' ];
 
@@ -35,7 +36,7 @@ export default function Navbar(){
     <>
       <nav className={styles.navbar}>
         <div className={styles.inner}>
-          <div className={styles.brand}>Elephant Labs</div>
+          <Link href="/" className={styles.brand}>Elephant Labs</Link>
 
           <div className={styles.actions}>
             <MagneticButton variant="primary" href="/chat" icon={<MessageSquare size={14}/>}>Chat</MagneticButton>
@@ -58,7 +59,7 @@ export default function Navbar(){
             </div>
 
             <MagneticButton variant="ghost" href="/manifesto" icon={<FileText size={14}/>}>Manifesto</MagneticButton>
-            <MagneticButton variant="ghost" href="/" icon={<GitBranch size={14}/>}>About</MagneticButton>
+            <MagneticButton variant="ghost" href="/about" icon={<GitBranch size={14}/>}>About</MagneticButton>
           </div>
 
           <div className={styles.spacer} />

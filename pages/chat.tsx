@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import Sidebar from '@/components/sidebar/Sidebar';
 import SideDNA from '@/components/chat/SideDNA';
 import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
@@ -35,16 +34,18 @@ export default function ChatPage(){
         return;
         }
       }catch(e){ /* ignore */ }
-      // visitors: start with empty ephemeral chat list stored in-memory/localStorage
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('ephemeral_chats') : null;
-      if (saved) setChats(JSON.parse(saved));
+
+      const guestChat = { id: 1, title: 'Guest Chat' };
+      setChats([guestChat]);
+      setActiveChat(guestChat);
+      setMessages([]);
     })();
   },[]);
 
   useEffect(()=>{
-    if (!activeChat) return;
+    if (!activeChat || !me) return;
     fetch(`/api/chats/${activeChat.id}/messages`).then(r=>r.json()).then(setMessages);
-  },[activeChat]);
+  },[activeChat, me]);
 
   async function createChat(){
     if (me){
@@ -56,12 +57,8 @@ export default function ChatPage(){
       setMessages([]);
     } else {
       // create ephemeral local chat for visitors
-      const chat = { id: Date.now(), title: 'Guest Chat' };
-      const next = [chat, ...chats];
-      setChats(next);
-      setActiveChat(chat);
       setMessages([]);
-      localStorage.setItem('ephemeral_chats', JSON.stringify(next));
+      setActiveChat({ id: 1, title: 'Guest Chat' });
     }
   }
 
@@ -71,11 +68,7 @@ export default function ChatPage(){
       setChats((c)=>c.filter(x=>x.id!==id));
       if (activeChat?.id===id) setActiveChat(null);
     } else {
-      // remove ephemeral local chat
-      const next = chats.filter(x=>x.id!==id);
-      setChats(next);
-      localStorage.setItem('ephemeral_chats', JSON.stringify(next));
-      if (activeChat?.id===id) setActiveChat(null);
+      setMessages([]);
     }
   }
 
@@ -89,7 +82,13 @@ export default function ChatPage(){
 
     // If logged in, persist user message
     if (me){
-      try{ await fetch(`/api/chats/${activeChat.id}/messages`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ role:'user', content }) }); }catch(e){ console.error(e) }
+      try{ 
+        await fetch(`/api/chats/${activeChat.id}/messages`, { 
+          method:'POST', 
+          headers:{'Content-Type':'application/json'}, 
+          body: JSON.stringify({ role:'user', content }) }
+        ); 
+      }catch(e){ console.error(e) }
     }
 
     // show thinking indicator
@@ -110,24 +109,22 @@ export default function ChatPage(){
 
   return (
     <div className="min-h-screen">
-      <div className="bg-slate-900/30 border-b border-slate-800"><Sidebar/></div>
       <main className="p-6 grid grid-cols-12 gap-6 relative">
-        {/* removed full-background DNA animation; small SideDNA placed under profile below */}
         <aside className="col-span-3">
-          <ChatList chats={chats} activeId={activeChat?.id||null} onSelect={(c: Chat) => setActiveChat(c)} onCreate={createChat} onDelete={deleteChat} />
+          <ChatList sessions={chats} activeId={activeChat?.id||null} onSelect={(c: Chat) => setActiveChat(c)} onCreate={createChat} onDelete={deleteChat} />
         </aside>
 
         <section className="col-span-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">{activeChat ? (activeChat.title || `Chat ${activeChat.id}`) : 'Welcome'}</h2>
-            <div className="text-sm text-slate-400">{activeChat ? `Chat ID: ${activeChat.id}` : ''}</div>
+            <h2 className="text-2xl font-bold">{me ? (activeChat ? (activeChat.title || `Chat ${activeChat.id}`) : 'Welcome') : 'Guest Mode' }</h2>
+            <div className="text-sm text-slate-400">{me ? (activeChat ? `Chat ID: ${activeChat.id}` : '') : 'Messages in this chat are not saved'}</div>
           </div>
 
           <div className="flex-1">
             {activeChat ? (
               <>
                 <ChatWindow messages={(Array.isArray(messages) ? messages : []).concat(thinking ? [{ id: -1, role: 'assistant', content: '...' }] : [])} />
-                {thinking && <div className="text-sm text-slate-400 mt-2">Assistant is thinking...</div>}
+                {/*{thinking && <div className="text-sm text-slate-400 mt-2">Assistant is thinking...</div>}*/}
                 <MessageInput value={input} onChange={setInput} onSend={send} />
               </>
             ) : (

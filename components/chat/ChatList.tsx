@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './chat.module.css';
-import MagneticButton from '@/components/ui/MagneticButton';
+import { Plus } from 'lucide-react';
 
 export default function ChatList({ sessions: initial = null, activeId, onSelect = ()=>{}, onCreate = ()=>{}, onDelete = ()=>{} , onNewFocus, onLoaded = (s:any)=>{} }: any){
   const [sessions, setSessions] = useState<any[] | null>(initial);
@@ -53,12 +53,21 @@ export default function ChatList({ sessions: initial = null, activeId, onSelect 
     <div>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-semibold">Sessions</h3>
-        <MagneticButton variant="primary" onClick={async ()=>{ onCreate(); onNewFocus && onNewFocus(); }}>{'New Chat'}</MagneticButton>
+        <motion.button  
+        className="w-10 h-10 bg-[rgba(109,40,217,0.4)] text-white rounded-lg flex items-center justify-center transition-all hover:bg-[rgba(109,40,217,0.6)]"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={async ()=>{ onCreate(); onNewFocus && onNewFocus(); }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </motion.button>
       </div>
       <div className={styles.sessions}>
         <AnimatePresence>
           {list.map((s:any)=> (
-            <motion.div key={s.id} layout initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-6 }} className={`p-3 rounded-lg cursor-pointer group relative ${activeId===s.id? 'ring-1 ring-primary/40':''}`} onClick={()=> onSelect(s)}>
+            <motion.div key={s.id} layout initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-6 }} className={`p-3 rounded-lg cursor-pointer group relative ${activeId===s.id? 'bg-[#0A1026]':''}`} onClick={()=> onSelect(s)}>
               <div className="font-semibold">{s.title || `Chat ${s.id}`}</div>
               <div className="text-sm text-slate-400">{s.preview || 'No messages yet'}</div>
 
