@@ -6,7 +6,7 @@ import Link from 'next/link';
 export default function Manifesto(){
   return (
     <div className={styles.pageContainer}>
-      <main className={styles.mainContainer}>
+      <main className={styles.mainContainer} style={{ paddingTop: '50px' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -219,7 +219,7 @@ export default function Manifesto(){
             marginTop: '48px',
           }}>
             <a 
-              href="/manifesto.pdf" 
+              href="/manifesto/Manifesto.pdf" 
               target="_blank" 
               rel="noopener noreferrer"
               style={{ textDecoration: 'none' }}
