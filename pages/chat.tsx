@@ -116,8 +116,8 @@ export default function ChatPage(){
 
         <section className="col-span-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">{me ? (activeChat ? (activeChat.title || `Chat ${activeChat.id}`) : 'Welcome') : 'Guest Mode' }</h2>
-            <div className="text-sm text-slate-400">{me ? (activeChat ? `Chat ID: ${activeChat.id}` : '') : 'Messages in this chat are not saved'}</div>
+            <h2 className="text-2xl font-bold">{me ? (activeChat ? (activeChat.title || `Chat ${activeChat.id}`) : `Hey, ${me.name}`) : 'Guest Mode' }</h2>
+            <div className="text-sm text-slate-400">{me ? (activeChat ? `Messages saved` : '') : 'Messages in this chat are not saved'}</div>
           </div>
 
           <div className="flex-1">
@@ -128,7 +128,9 @@ export default function ChatPage(){
                 <MessageInput value={input} onChange={setInput} onSend={send} />
               </>
             ) : (
-              <div className="rounded-xl p-8 bg-slate-800/40 h-[60vh] flex items-center justify-center">Select or create a chat to start</div>
+              <div className="rounded-xl p-8 bg-slate-800/40 h-[60vh] flex items-center justify-center">
+              Select or <button onClick={createChat} className="font-bold text-white-400 hover:text-blue-300 transition-colors ml-1 mr-1">create a chat</button> to start
+              </div>
             )}
           </div>
         </section>

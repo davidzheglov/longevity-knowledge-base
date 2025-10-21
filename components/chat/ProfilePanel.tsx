@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import MagneticButton from '@/components/ui/MagneticButton';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type Profile = { id?: string; email?: string; name?: string; avatarUrl?: string; bio?: string; education?: string };
 
@@ -10,6 +11,8 @@ export default function ProfilePanel({ profile: initialProfile, onUpdated }:{ pr
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState<Profile>({} as Profile);
   const [saving, setSaving] = useState(false);
+  // NEW: State to control panel expansion
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(()=>{
     let mounted = true;
@@ -63,12 +66,12 @@ export default function ProfilePanel({ profile: initialProfile, onUpdated }:{ pr
     if (confirm !== profile.email) return;
     try{
       await fetch('/api/auth/delete', { method: 'POST', credentials: 'include' });
-      // logged-out state
       setProfile(null);
       onUpdated && onUpdated(null as any);
     }catch(e){ console.error(e) }
   }
 
+  // CHANGED: Made this function trigger file input click
   function onFile(e: React.ChangeEvent<HTMLInputElement>){
     const f = e.target.files && e.target.files[0];
     if (!f) return;
@@ -76,6 +79,14 @@ export default function ProfilePanel({ profile: initialProfile, onUpdated }:{ pr
     reader.onload = ()=>{ const dataUrl = reader.result as string; setForm(s=> ({ ...s, avatarUrl: dataUrl })); };
     reader.readAsDataURL(f);
   }
+
+  // NEW: Function to trigger file input when avatar is clicked
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const handleAvatarClick = () => {
+    if (edit && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   if (loading) return <div className="w-80 p-4 rounded-xl bg-slate-800/40">Loading…</div>;
 
@@ -89,10 +100,50 @@ export default function ProfilePanel({ profile: initialProfile, onUpdated }:{ pr
     );
   }
 
+  // NEW: Collapsed view - just avatar and name
+  if (!isExpanded) {
+    return (
+      <div 
+        className="w-80 p-4 rounded-xl bg-slate-800/40 backdrop-blur-md shadow-lg cursor-pointer hover:bg-slate-800/60 transition-all"
+        onClick={() => setIsExpanded(true)}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary to-accent flex items-center justify-center text-lg font-bold flex-shrink-0">
+            {profile.avatarUrl ? <img src={profile.avatarUrl} alt="avatar" className="w-12 h-12 object-cover"/> : (profile.name ? profile.name[0] : 'U') }
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold truncate">{profile.name || 'Unknown User'}</div>
+            <div className="text-xs text-slate-400">Click to manage profile</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // EXISTING: Full expanded panel with customization
   return (
-    <div className="w-80 p-4 rounded-xl bg-slate-800/40 backdrop-blur-md shadow-lg">
+    <motion.div 
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="w-80 p-4 rounded-xl bg-slate-800/40 backdrop-blur-md shadow-lg"
+    >
+      {/* NEW: Close button */}
+      <div className="flex justify-end mb-0">
+        <button 
+          onClick={() => { setIsExpanded(false); setEdit(false); }}
+          className="text-slate-400 hover:text-white text-sm"
+        >
+          ✕
+        </button>
+      </div>
+
       <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xl font-bold">
+        {/* CHANGED: Added onClick handler and cursor pointer to avatar */}
+        <div 
+          className={`w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xl font-bold ${edit ? 'cursor-pointer hover:opacity-80' : ''}`}
+          onClick={handleAvatarClick}
+          title={edit ? "Click to change avatar" : ""}
+        >
           {profile.avatarUrl ? <img src={profile.avatarUrl} alt="avatar" className="w-16 h-16 object-cover"/> : (profile.name ? profile.name[0] : 'U') }
         </div>
         <div className="flex-1">
@@ -130,7 +181,13 @@ export default function ProfilePanel({ profile: initialProfile, onUpdated }:{ pr
         ) : (
           <label className="text-xs bg-slate-700/40 px-2 py-1 rounded cursor-pointer hover:bg-slate-600/40 transition-colors">
             Change Avatar
-            <input type="file" accept="image/*" onChange={onFile} className="hidden" />
+            <input 
+              ref={fileInputRef}
+              type="file" 
+              accept="image/*" 
+              onChange={onFile} 
+              className="hidden" 
+            />
           </label>
         )}
         <div className="flex items-center gap-2">
@@ -148,6 +205,9 @@ export default function ProfilePanel({ profile: initialProfile, onUpdated }:{ pr
       <div className="mt-3 text-center">
         <button onClick={onDeleteAccount} className="text-xs text-rose-400">Delete account</button>
       </div>
-    </div>
+
+      {/* CHANGED: Hidden file input with ref for programmatic triggering */}
+      {/* (Moved from label to support both avatar click and button click) */}
+    </motion.div>
   );
 }

@@ -52,7 +52,7 @@ export default function ChatList({ sessions: initial = null, activeId, onSelect 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold">Sessions</h3>
+        <h3 className="text-lg font-semibold">Chats</h3>
         <motion.button  
         className="w-10 h-10 bg-[rgba(109,40,217,0.4)] text-white rounded-lg flex items-center justify-center transition-all hover:bg-[rgba(109,40,217,0.6)]"
         whileHover={{ scale: 1.05 }}
