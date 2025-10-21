@@ -87,11 +87,20 @@ export default function AboutPage() {
                 paddingLeft: '24px',
                 listStyle: 'none',
               }}>
-                <li><strong style={{ color: '#a78bfa' }}>Bob</strong> - AI/ML Engineer specializing in biological data analysis</li>
-                <li><strong style={{ color: '#a78bfa' }}>Amy</strong> - Computational biologist with expertise in aging research</li>
-                <li><strong style={{ color: '#a78bfa' }}>Carl</strong> - Full-stack developer and UX designer</li>
-                <li><strong style={{ color: '#a78bfa' }}>David</strong> - Data scientist focused on predictive modeling</li>
-                <li><strong style={{ color: '#a78bfa' }}>Ethan</strong> - Research scientist in longevity and biomarkers</li>
+                <li><strong style={{ color: '#a78bfa' }}>
+                    <a href="" >
+                        Maxim Kovalev
+                    </a>
+                </strong> - biologist, data scientist; Master's student at Skolkovo</li>
+                <li><strong style={{ color: '#a78bfa' }}>
+                    <a href='https://www.linkedin.com/in/ekaterina-leksina/'>
+                    Ekaterina Leksina</a></strong> - frontend developer, UI/UX designer; Warwick University</li>
+                <li><strong style={{ color: '#a78bfa' }}>
+                    <a href='https://www.linkedin.com/in/dmitrii-galatenko-740799211/'>Dmitrii Galatenko</a></strong> - ML engineer, backend developer; Cambridge University</li>
+                <li><strong style={{ color: '#a78bfa' }}>
+                    <a href='https://www.linkedin.com/in/david-zheglov/'>David Zheglov</a></strong> - frontend and infrastructure developer; HKUST</li>
+                <li><strong style={{ color: '#a78bfa' }}>
+                    <a href='https://www.linkedin.com/in/timofey-fedoseev-826609231/'>Timofey Fedoseev</a></strong> - ML engineer; ETH</li>
               </ul>
             </div>
 
