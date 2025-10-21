@@ -88,10 +88,10 @@ export default function AboutPage() {
                 listStyle: 'none',
               }}>
                 <li><strong style={{ color: '#a78bfa' }}>
-                    <a href="" >
+                    <a href="https://www.linkedin.com/in/maxim-kovalev-8bb952379/" >
                         Maxim Kovalev
                     </a>
-                </strong> - biologist, data scientist; Master's student at Skolkovo</li>
+                </strong> - biologist, data scientist; Skolkovo</li>
                 <li><strong style={{ color: '#a78bfa' }}>
                     <a href='https://www.linkedin.com/in/ekaterina-leksina/'>
                     Ekaterina Leksina</a></strong> - frontend developer, UI/UX designer; Warwick University</li>
@@ -100,7 +100,7 @@ export default function AboutPage() {
                 <li><strong style={{ color: '#a78bfa' }}>
                     <a href='https://www.linkedin.com/in/david-zheglov/'>David Zheglov</a></strong> - frontend and infrastructure developer; HKUST</li>
                 <li><strong style={{ color: '#a78bfa' }}>
-                    <a href='https://www.linkedin.com/in/timofey-fedoseev-826609231/'>Timofey Fedoseev</a></strong> - ML engineer; ETH</li>
+                    <a href='https://www.linkedin.com/in/timofey-fedoseev-826609231/'>Timofey Fedoseev</a></strong> - ML engineer, backend developer; ETH</li>
               </ul>
             </div>
 
