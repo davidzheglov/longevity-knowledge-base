@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 outputs/
 *.log
+*.tmp
+*.csv
+.DS_Store
+Thumbs.db

@@ -1,10 +1,17 @@
 node_modules
 .next
+out
 .git
 *.log
+.eslintcache
+.vscode
+.DS_Store
+Thumbs.db
+.env
 Dockerfile*
 llm-agent/.venv
 llm-agent/outputs
 llm-agent/__pycache__
 **/__pycache__
 **/*.pyc
+prisma/dev.db*
