@@ -36,9 +36,16 @@ const proteins = [
     name: 'IGF1',
     description: 'Growth factor involved in aging; reduced signaling associated with longevity',
     icon: '📈',
+    color: 'rgba(142, 249, 255, 0.27)',
+    borderColor: 'rgba(149, 238, 254, 0.94)',
+  },
+  {
+    name: 'GLP-1',
+    description: 'Hormone regulating glucose metabolism and appetite; agonists show promise in metabolic health',
+    icon: '💉',
     color: 'rgba(249, 115, 22, 0.2)',
     borderColor: 'rgba(249, 115, 22, 0.4)',
-  },
+  }
 ];
 
 export default function Proteins() {

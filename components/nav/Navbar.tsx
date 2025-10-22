@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CommandPalette, { openCommandPalette } from '@/components/CommandPalette';
 import Link from 'next/link';
 
-const proteins = [ 'SIRT1','mTOR','FOXO3','AMPK','IGF1' ];
+const proteins = [ 'SIRT1','mTOR','FOXO3','AMPK','IGF1', 'GLP-1' ];
 
 export default function Navbar(){
   const [megaOpen, setMegaOpen] = useState(false);
