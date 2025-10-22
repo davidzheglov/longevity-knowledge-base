@@ -2,8 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './navbar.module.css';
 import MagneticButton from '@/components/ui/MagneticButton';
-import { Layers, GitBranch, FileText, MessageSquare } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Layers, GitBranch, FileText, MessageSquare, Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
 import CommandPalette, { openCommandPalette } from '@/components/CommandPalette';
 import Link from 'next/link';
 
@@ -58,6 +58,7 @@ export default function Navbar(){
 
             <MagneticButton variant="ghost" href="/manifesto" icon={<FileText size={14}/>}>Manifesto</MagneticButton>
             <MagneticButton variant="ghost" href="/about" icon={<GitBranch size={14}/>}>About</MagneticButton>
+            <MagneticButton variant="ghost" href="/clocks" icon={<Clock size={14}/>}>Aging clocks</MagneticButton>
           </div>
 
           <div className={styles.spacer} />
