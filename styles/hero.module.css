@@ -1,0 +1,40 @@
+.hero{
+  position: relative;
+  min-height: 68vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.heroInner{
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 4rem 2rem;
+}
+.title{
+  font-size: 3.25rem;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.titleChar{ display: inline-block; }
+.subtitle{ margin-top: 0.75rem; color: rgba(226,232,240,0.8); }
+.magnetic{ display:inline-block }
+.magneticIcon{ width:1rem; height:1rem }
+.magneticButton{ padding:0.6rem 1rem; border-radius:9999px; display:inline-flex; align-items:center; gap:0.5rem }
+.primary{ background: linear-gradient(90deg,#7c3aed,#06b6d4); color:white }
+.ghost{ background: transparent; border:1px solid rgba(148,163,184,0.12); color:inherit }
+
+.rightSlot{
+  position: absolute;
+  right: 6vw;
+  top: 40%;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  z-index: 8;
+}
+
+.magneticButton:hover{ transform: translateY(-2px) scale(1.02); transition: transform 160ms ease; box-shadow: 0 6px 20px rgba(2,6,23,0.5); }
+
+.primary{ box-shadow: 0 8px 28px rgba(124,58,237,0.12); }

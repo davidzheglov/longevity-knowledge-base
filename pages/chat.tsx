@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import Sidebar from '@/components/sidebar/Sidebar';
+import SideDNA from '@/components/chat/SideDNA';
+import SearchModeSelect from '@/components/chat/SearchModeSelect';
 import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
 import MessageInput from '@/components/chat/MessageInput';
@@ -20,24 +21,56 @@ export default function ChatPage(){
   const [thinking, setThinking] = useState(false);
 
   useEffect(()=>{ fetch('/api/auth/me').then(r=>r.json()).then(d=>{ if (d?.user){ setMe(d.user); fetch('/api/profile').then(r=>r.json()).then(p=> setProfile(p.user || profile)).catch(()=>{}); } }); fetch('/api/chats').then(r=>r.json()).then(setChats) },[]);
+  // When page loads, only fetch persisted chats if the user is authenticated.
+  useEffect(()=>{
+    (async ()=>{
+      try{
+        const meRes = await fetch('/api/auth/me');
+        const meJson = await meRes.json();
+        if (meJson?.user){ setMe(meJson.user); try{ const p = await (await fetch('/api/profile')).json(); setProfile(p.user || profile); }catch(e){};
+        // fetch persisted chats for authenticated user
+        const chatsRes = await fetch('/api/chats');
+        const chatsJson = await chatsRes.json();
+        setChats(chatsJson || []);
+        return;
+        }
+      }catch(e){ /* ignore */ }
+
+      const guestChat = { id: 1, title: 'Guest Chat' };
+      setChats([guestChat]);
+      setActiveChat(guestChat);
+      setMessages([]);
+    })();
+  },[]);
 
   useEffect(()=>{
-    if (!activeChat) return;
+    if (!activeChat || !me) return;
     fetch(`/api/chats/${activeChat.id}/messages`).then(r=>r.json()).then(setMessages);
-  },[activeChat]);
+  },[activeChat, me]);
 
   async function createChat(){
-    const res = await fetch('/api/chats',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title: 'New Chat' }) });
-    const chat = await res.json();
-    setChats((c)=>[chat,...c]);
-    setActiveChat(chat);
-    setMessages([]);
+    if (me){
+      const res = await fetch('/api/chats',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title: 'New Chat' }) });
+      if (!res.ok) return;
+      const chat = await res.json();
+      setChats((c)=>[chat,...c]);
+      setActiveChat(chat);
+      setMessages([]);
+    } else {
+      // create ephemeral local chat for visitors
+      setMessages([]);
+      setActiveChat({ id: 1, title: 'Guest Chat' });
+    }
   }
 
   async function deleteChat(id:number){
-    await fetch(`/api/chats/${id}`,{ method:'DELETE' });
-    setChats((c)=>c.filter(x=>x.id!==id));
-    if (activeChat?.id===id) setActiveChat(null);
+    if (me){
+      await fetch(`/api/chats/${id}`,{ method:'DELETE' });
+      setChats((c)=>c.filter(x=>x.id!==id));
+      if (activeChat?.id===id) setActiveChat(null);
+    } else {
+      setMessages([]);
+    }
   }
 
   async function send(){
@@ -50,7 +83,13 @@ export default function ChatPage(){
 
     // If logged in, persist user message
     if (me){
-      try{ await fetch(`/api/chats/${activeChat.id}/messages`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ role:'user', content }) }); }catch(e){ console.error(e) }
+      try{ 
+        await fetch(`/api/chats/${activeChat.id}/messages`, { 
+          method:'POST', 
+          headers:{'Content-Type':'application/json'}, 
+          body: JSON.stringify({ role:'user', content }) }
+        ); 
+      }catch(e){ console.error(e) }
     }
 
     // show thinking indicator
@@ -71,33 +110,42 @@ export default function ChatPage(){
 
   return (
     <div className="min-h-screen">
-      <div className="bg-slate-900/30 border-b border-slate-800"><Sidebar/></div>
-      <main className="p-6 grid grid-cols-12 gap-6">
+      <main className="p-6 grid grid-cols-12 gap-6 relative">
         <aside className="col-span-3">
-          <ChatList chats={chats} activeId={activeChat?.id||null} onSelect={(c)=>setActiveChat(c)} onCreate={createChat} onDelete={deleteChat} />
+          <ChatList sessions={chats} activeId={activeChat?.id||null} onSelect={(c: Chat) => setActiveChat(c)} onCreate={createChat} onDelete={deleteChat} />
         </aside>
 
         <section className="col-span-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">{activeChat ? (activeChat.title || `Chat ${activeChat.id}`) : 'Welcome'}</h2>
-            <div className="text-sm text-slate-400">{activeChat ? `Chat ID: ${activeChat.id}` : ''}</div>
+            <h2 className="text-2xl font-bold">{me ? (activeChat ? (activeChat.title || `Chat ${activeChat.id}`) : `Hey, ${me.name}`) : 'Guest Mode' }</h2>
+            <div className="text-sm text-slate-400">{me ? (activeChat ? `Messages saved` : '') : 'Messages in this chat are not saved'}</div>
+            <div className="flex items-center gap-4">
+              <SearchModeSelect onChange={(v)=> console.log('search mode', v)} />
+            </div>
           </div>
 
           <div className="flex-1">
             {activeChat ? (
               <>
-                <ChatWindow messages={messages.concat(thinking? [{ id: -1, role: 'assistant', content: '...' }]:[])} />
-                {thinking && <div className="text-sm text-slate-400 mt-2">Assistant is thinking...</div>}
+                <ChatWindow messages={(Array.isArray(messages) ? messages : []).concat(thinking ? [{ id: -1, role: 'assistant', content: '...' }] : [])} />
+                {/*{thinking && <div className="text-sm text-slate-400 mt-2">Assistant is thinking...</div>}*/}
                 <MessageInput value={input} onChange={setInput} onSend={send} />
               </>
             ) : (
-              <div className="rounded-xl p-8 bg-slate-800/40 h-[60vh] flex items-center justify-center">Select or create a chat to start</div>
+              <div className="rounded-xl p-8 bg-slate-800/40 h-[60vh] flex items-center justify-center">
+              Select or <button onClick={createChat} className="font-bold text-white-400 hover:text-blue-300 transition-colors ml-1 mr-1">create a chat</button> to start
+              </div>
             )}
           </div>
         </section>
 
         <aside className="col-span-3">
           <ProfilePanel profile={profile} />
+          <div className="p-4">
+            <div className="mt-4 flex justify-center">
+              <SideDNA />
+            </div>
+          </div>
         </aside>
       </main>
     </div>

@@ -75,9 +75,17 @@ margin-bottom: 20px;
 }
 
 .section{
-    font-size: 20px;
-    margin-bottom: 5px;
+  font-size: 18px;
+  margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: #e6e6f0;
+  transition: background-color 160ms ease, transform 120ms ease;
 }
+.section:hover{ background: linear-gradient(90deg, rgba(124,58,237,0.12), rgba(6,182,212,0.06)); transform: translateX(4px); }
 
 
 .overlay {
@@ -92,6 +100,6 @@ margin-bottom: 20px;
 
 .authButtons { display:flex; gap:8px; align-items:center }
 .authBlock { margin-top: 20px }
-.logoutBtn { margin-left: 8px; color:#b8b4d4; background:none; border:1px solid #b8b4d4; padding:6px 8px; border-radius:6px }
+.logoutBtn { margin-left: 8px; color:#fff; background: linear-gradient(90deg,#7c3aed,#06b6d4); border: none; padding:8px 10px; border-radius:10px; box-shadow: 0 8px 20px rgba(124,58,237,0.12); }
 .userEmail { font-size:14px }
 .sep { color:#b8b4d4 }

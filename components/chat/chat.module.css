@@ -1,0 +1,9 @@
+.page{ min-height: calc(100vh - 64px); display:grid; grid-template-columns: 300px 1fr 320px; gap:20px; padding:24px; }
+.left{ display:flex; flex-direction:column; gap:12px }
+.center{ display:flex; flex-direction:column; gap:12px; }
+.topbar{ display:flex; align-items:center; gap:12px; }
+.sessions{ display:flex; flex-direction:column; gap:12px; }
+.messages{ flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:12px }
+.composerWrap{ border-top:1px solid rgba(255,255,255,0.02); padding-top:12px }
+.right{ display:flex; flex-direction:column; gap:12px }
+.breadcrumb{ font-size:13px; color:rgba(200,200,210,0.6) }

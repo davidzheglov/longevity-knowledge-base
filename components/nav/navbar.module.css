@@ -1,0 +1,20 @@
+.navbar{
+  position: sticky;
+  top:0;
+  z-index:1200;
+  backdrop-filter: blur(8px);
+  background: linear-gradient(90deg, rgba(88, 28, 135, 0.6), rgba(109, 40, 217, 0.4));
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 6px 24px rgba(2,6,23,0.4);
+}
+.inner{ max-width:1200px; margin:0 auto; display:flex; align-items:center; gap:16px; padding:10px 20px; }
+.brand{ font-weight:700; font-size:1.1rem; letter-spacing:-0.02em }
+.actions{ margin-left:20px; display:flex; gap:10px; align-items:center }
+.spacer{ flex:1 }
+.mega{
+  position:absolute; left:50%; transform:translateX(-50%); top:64px; background:linear-gradient(180deg, rgba(12,12,16,0.9), rgba(12,12,16,0.88)); padding:18px; border-radius:12px; box-shadow:0 10px 40px rgba(2,6,23,0.6);
+}
+.megaGrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px }
+.tile{ padding:16px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); cursor:pointer; transition: transform 160ms ease, box-shadow 160ms ease; }
+.tile:hover{ transform: translateY(-6px) rotateX(6deg) scale(1.02); box-shadow:0 20px 40px rgba(2,6,23,0.5); }
+.cmd{ margin-left:12px }
