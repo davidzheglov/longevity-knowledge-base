@@ -9,6 +9,7 @@ import DNAField from '@/components/hero/DNAField';
 import styles from '@/components/chat/chat.module.css';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import SearchModeSelect from '@/components/chat/SearchModeSelect';
 
 export default function ChatPage(){
   const [sessions, setSessions] = useState<any[]>([]);
@@ -115,7 +116,10 @@ export default function ChatPage(){
 
         <section className={styles.center}>
           <motion.div className={styles.topbar} initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.2 }}>
-            <h2 className="text-2xl font-bold">{active ? active.title : 'Welcome'}</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">{active ? active.title : 'Welcome'}</h2>
+              <SearchModeSelect onChange={(v)=> console.log('search mode', v)} />
+            </div>
           </motion.div>
 
           <div className={styles.messages}>

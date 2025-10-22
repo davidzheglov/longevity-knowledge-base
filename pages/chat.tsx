@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import SideDNA from '@/components/chat/SideDNA';
+import SearchModeSelect from '@/components/chat/SearchModeSelect';
 import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
 import MessageInput from '@/components/chat/MessageInput';
@@ -118,6 +119,9 @@ export default function ChatPage(){
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold">{me ? (activeChat ? (activeChat.title || `Chat ${activeChat.id}`) : `Hey, ${me.name}`) : 'Guest Mode' }</h2>
             <div className="text-sm text-slate-400">{me ? (activeChat ? `Messages saved` : '') : 'Messages in this chat are not saved'}</div>
+            <div className="flex items-center gap-4">
+              <SearchModeSelect onChange={(v)=> console.log('search mode', v)} />
+            </div>
           </div>
 
           <div className="flex-1">
