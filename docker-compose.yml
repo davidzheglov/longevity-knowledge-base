@@ -20,6 +20,10 @@ services:
     environment:
       - NODE_ENV=production
       - AGENT_API_URL=http://agent:8000
+      # SQLite DB inside container; Prisma uses this at runtime
+      - DATABASE_URL=file:/app/dev.db
+      # Optional: extend FE proxy timeout to agent (ms)
+      - NEXT_AGENT_TIMEOUT_MS=120000
     ports:
       - "8080:3000"
     depends_on:

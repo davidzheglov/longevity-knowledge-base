@@ -24,6 +24,7 @@ class ChatResponse(BaseModel):
     output: str
     session_id: str
     artifacts: List[dict] | None = None
+    tools_used: List[str] | None = None
 
 
 app = FastAPI(title="Longevity Agent API", version="0.1.0")
@@ -131,7 +132,13 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse:
             "url": url,
         })
 
-    return ChatResponse(output=output, session_id=session_id, artifacts=artifacts)
+    tools_used: List[str] = []
+    try:
+        tools_used = getattr(_agent, "get_tools_used", lambda: [])() or []
+    except Exception:
+        tools_used = []
+
+    return ChatResponse(output=output, session_id=session_id, artifacts=artifacts, tools_used=tools_used)
 
 
 if __name__ == "__main__":

@@ -5,14 +5,15 @@ import ChatList from '@/components/chat/ChatList';
 import ChatWindow from '@/components/chat/ChatWindow';
 import Composer from '@/components/chat/Composer';
 import ProfilePanel from '@/components/chat/ProfilePanel';
+import ArtifactsPanel, { Artifact as ArtifactType } from '@/components/chat/ArtifactsPanel';
 import DNAField from '@/components/hero/DNAField';
 import styles from '@/components/chat/chat.module.css';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function ChatPage(){
-  type Artifact = { id: string; label?: string; type?: string; path?: string; name?: string; size?: number; url?: string };
-  type ChatMessage = { id: number; role: 'user' | 'assistant'; content: string; artifacts?: Artifact[] };
+  type Artifact = ArtifactType;
+  type ChatMessage = { id: number; role: 'user' | 'assistant'; content: string; artifacts?: ArtifactType[]; tools?: string[]; thinking?: boolean };
   type ChatSession = { id: string | number; title?: string; preview?: string; _optimistic?: boolean };
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -112,13 +113,17 @@ export default function ChatPage(){
   }
 
   async function onSend(text: string){
+    try { console.log('[chat] onSend start', { len: text?.length, active: active?.id }); } catch {}
     // If no active session, create one first
     let session = active;
     if (!session){
       session = await createSession();
+      try { console.log('[chat] created session', session); } catch {}
     }
-    const userMsg: ChatMessage = { id: Date.now(), role: 'user', content: text };
-    setMessages((m: ChatMessage[]) => [...m, userMsg]);
+  const userMsgId = Date.now();
+  const userMsg: ChatMessage = { id: userMsgId, role: 'user', content: text };
+  const pendingId = userMsgId + 1;
+  setMessages((m: ChatMessage[]) => [...m, userMsg, { id: pendingId, role: 'assistant', content: '', thinking: true }]);
 
     // If this is the first message of the session, set a reasonable title
     if (!session?.preview || session?._optimistic || session?.title === 'New Session'){
@@ -139,16 +144,19 @@ export default function ChatPage(){
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, sessionId: String((session as ChatSession).id) })
       });
+      try { console.log('[chat] /api/agent/chat status', resp.status); } catch {}
       if (!resp.ok){
         const err = await resp.json().catch(()=>({error:'failed'}));
         toast.error('Agent error: ' + (err?.error || resp.statusText));
-        setMessages((m: ChatMessage[]) => [...m,{ id: Date.now()+1, role: 'assistant', content: 'Sorry, I had an issue processing that.' }]);
+        setMessages((m: ChatMessage[]) => m.map((mm)=> mm.id===pendingId? ({ ...mm, thinking:false, content:'Sorry, I had an issue processing that.' }) : mm));
         return;
       }
   const data = await resp.json();
+  try { console.log('[chat] agent data', { hasOutput: typeof data?.output === 'string', artifacts: Array.isArray(data?.artifacts) ? data.artifacts.length : 0 }); } catch {}
   const content = (data?.output as string) || 'No output';
   const artifacts: Artifact[] = Array.isArray(data?.artifacts) ? data.artifacts : [];
-  setMessages((m: ChatMessage[]) => [...m, { id: Date.now()+2, role: 'assistant', content, artifacts }]);
+  const tools: string[] = Array.isArray(data?.tools_used) ? data.tools_used : [];
+  setMessages((m: ChatMessage[]) => m.map((mm)=> mm.id===pendingId ? ({ ...mm, thinking:false, content, artifacts, tools }) : mm));
       // update session preview/title optimistically
       const sid = (session as ChatSession).id;
       setSessions((list: ChatSession[]) => list.map((s) => s.id===sid ? ({...s, preview: content.slice(0,120)}) : s));
@@ -156,8 +164,9 @@ export default function ChatPage(){
         try{ sessionStorage.setItem('visitor_chats', JSON.stringify(sessions.map((s: ChatSession) => s.id===sid? ({...s, preview: content.slice(0,120)}) : s))); }catch(e){}
       }
     }catch(e:any){
+      try { console.error('[chat] network error', e); } catch {}
       toast.error('Network error talking to agent');
-      setMessages((m: ChatMessage[]) => [...m,{ id: Date.now()+3, role: 'assistant', content: 'Network error talking to agent.' }]);
+      setMessages((m: ChatMessage[]) => m.map((mm)=> mm.id===pendingId ? ({ ...mm, thinking:false, content:'Network error talking to agent.' }) : mm));
     }
   }
 
@@ -194,6 +203,19 @@ export default function ChatPage(){
             <div className="mt-6 flex justify-center">
               <DNAField anchor="inline" animationPath="/animations/dna3.json" width={120} height={120} />
             </div>
+
+            {/* Session-wide artifacts list */}
+            {(() => {
+              const all: Artifact[] = [];
+              for (const m of messages){
+                if (m.role === 'assistant' && Array.isArray(m.artifacts)){
+                  for (const a of m.artifacts){
+                    if (a && !all.find((x)=> x.id === a.id)) all.push(a);
+                  }
+                }
+              }
+              return <ArtifactsPanel artifacts={all} />;
+            })()}
           </div>
         </aside>
       </main>

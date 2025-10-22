@@ -4,7 +4,7 @@ import { Virtuoso } from 'react-virtuoso';
 import { motion, useReducedMotion } from 'framer-motion';
 
 type Artifact = { id: string; label?: string; type?: string; path?: string; name?: string; size?: number; url?: string };
-type Message = { id: number; role: string; content: string; artifacts?: Artifact[] };
+type Message = { id: number; role: string; content: string; artifacts?: Artifact[]; tools?: string[]; thinking?: boolean };
 
 function isImageType(t?: string) {
   const x = (t||'').toLowerCase();
@@ -101,7 +101,7 @@ function renderMarkdown(text: string) {
         const level = Math.min(6, h[1].length);
         const text = h[2];
         const common = "font-semibold mt-3 mb-1";
-        if (level <= 2) return nodes.push(<h2 key={`h-${idx}-${nodes.length}`} className={`${common} text-lg`}>{renderInline(text)}</h2>), null;
+        if (level <= 2) { nodes.push(<h2 key={`h-${idx}-${nodes.length}`} className={`${common} text-lg`}>{renderInline(text)}</h2>); continue; }
         if (level === 3) { nodes.push(<h3 key={`h-${idx}-${nodes.length}`} className={`${common} text-base`}>{renderInline(text)}</h3>); continue; }
         nodes.push(<div key={`h-${idx}-${nodes.length}`} className={`${common}`}>{renderInline(text)}</div>);
         continue;
@@ -143,15 +143,21 @@ export default function ChatWindow({ messages } : { messages: Message[] }){
   const itemContent = (index: number) => {
     const m = messages[index];
     const isUser = m.role === 'user';
-    const containerClasses = `max-w-[70%] p-3 rounded-2xl shadow-md ${isUser ? 'self-end bg-gradient-to-tr from-primary to-accent text-white' : 'self-start bg-slate-700/60 text-slate-100'}`;
+  const containerClasses = `max-w-[70%] p-3 rounded-2xl shadow-md ${isUser ? 'self-end bg-gradient-to-tr from-primary to-accent text-white' : 'self-start bg-slate-700/60 text-slate-100'}`;
 
     const motionProps = reduce ? {} : { initial: { opacity: 0, y: 6 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -6 }, transition: { duration: 0.18 } };
 
+    const rendered = isUser ? m.content : renderMarkdown(m.content);
     return (
       <motion.div {...motionProps} key={m.id} className={containerClasses}>
         <div className="text-sm whitespace-pre-wrap">
-          {isUser ? m.content : renderMarkdown(m.content)}
+          {m.thinking && !isUser ? (<span className="opacity-80">Assistant is thinking…</span>) : (isUser ? (m.content || '') : (rendered || <span>{m.content || ''}</span>))}
         </div>
+        {(!isUser && Array.isArray(m.tools) && m.tools.length > 0) && (
+          <div className="mt-2 text-[11px] text-slate-300 opacity-90">
+            Using tools: {m.tools.join(', ')}
+          </div>
+        )}
         {(!isUser && m.artifacts && m.artifacts.length > 0) && (
           <div className="mt-3 flex flex-wrap gap-3">
             {m.artifacts.map((a) => (

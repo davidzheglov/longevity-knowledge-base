@@ -80,13 +80,13 @@ class LongevityAgent:
     each tool based on the user's query.
     """
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-5"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-5-mini"):
         """
         Initialize the agent with OpenAI API key and model.
         
         Args:
             api_key: OpenAI API key (if None, reads from OPENAI_API_KEY env var)
-            model: OpenAI model to use (default: gpt-5)
+            model: OpenAI model to use (default: gpt-5-mini)
         """
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
         if not self.api_key:
@@ -498,6 +498,35 @@ class LongevityAgent:
             "role": "system",
             "content": self.system_prompt
         }]
+
+    def get_tools_used(self) -> List[str]:
+        """Return a de-duplicated, in-order list of tool/function names used in the last chat run.
+
+        This inspects conversation_history entries recorded during the most recent chat call,
+        collecting names from both the new tools API (tool_calls) and legacy function_call path.
+        """
+        names: List[str] = []
+        for m in self.conversation_history:
+            try:
+                # New tools API structure
+                if isinstance(m, dict) and isinstance(m.get("tool_calls"), list):
+                    for tc in m["tool_calls"]:
+                        fn = None
+                        if isinstance(tc, dict):
+                            f = tc.get("function")
+                            if isinstance(f, dict):
+                                fn = f.get("name")
+                        if fn and fn not in names:
+                            names.append(fn)
+                # Legacy function_call
+                fc = m.get("function_call") if isinstance(m, dict) else None
+                if isinstance(fc, dict):
+                    fn = fc.get("name")
+                    if fn and fn not in names:
+                        names.append(fn)
+            except Exception:
+                continue
+        return names
 
     def _looks_well_formatted(self, text: str) -> bool:
         """Heuristic: check for TL;DR bullets or section headers to decide if reformat is needed."""
