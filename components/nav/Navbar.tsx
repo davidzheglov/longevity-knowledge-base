@@ -42,7 +42,6 @@ export default function Navbar(){
             <MagneticButton variant="primary" href="/chat" icon={<MessageSquare size={14}/>}>Chat</MagneticButton>
             <div ref={proteinsRef} tabIndex={0} style={{ position:'relative' }}>
               <MagneticButton variant="ghost" href="/proteins" icon={<Layers size={14}/>}>Proteins</MagneticButton>
-              <AnimatePresence>
                 {megaOpen && (
                   <motion.div className={styles.mega} initial={{ opacity:0, scale:0.96 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.96 }} transition={{ duration: 0.18 }}>
                     <div className={styles.megaGrid}>
@@ -55,7 +54,6 @@ export default function Navbar(){
                     </div>
                   </motion.div>
                 )}
-              </AnimatePresence>
             </div>
 
             <MagneticButton variant="ghost" href="/manifesto" icon={<FileText size={14}/>}>Manifesto</MagneticButton>
