@@ -499,3 +499,231 @@ ALL_SCHEMAS = [
     GENERATE_HANNUM_REPORT_SCHEMA,
 ]
 
+# === Artifact helper schemas (exposed to the model) ===
+
+ARTIFACTS_LIST_SCHEMA = {
+    "name": "artifacts_list",
+    "description": "List recorded artifacts in the current session (optionally filter by type).",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "artifact_type": {"type": ["string", "null"], "description": "Filter by type: e.g., fasta, png, xlsx"}
+        },
+        "required": []
+    }
+}
+
+ARTIFACTS_RESOLVE_SCHEMA = {
+    "name": "artifacts_resolve",
+    "description": "Resolve an artifact id or label to its absolute file path.",
+    "parameters": {
+        "type": "object",
+        "properties": {"id_or_label": {"type": "string"}},
+        "required": ["id_or_label"]
+    }
+}
+
+ARTIFACTS_SEARCH_SCHEMA = {
+    "name": "artifacts_search",
+    "description": "Search artifacts by filename substring (case-insensitive).",
+    "parameters": {
+        "type": "object",
+        "properties": {"name_substring": {"type": "string"}},
+        "required": ["name_substring"]
+    }
+}
+
+ARTIFACTS_READ_TEXT_SCHEMA = {
+    "name": "artifacts_read_text",
+    "description": "Read a small text artifact under the session outputs for quoting/summarizing (returns up to max_bytes).",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "id_or_path": {"type": "string", "description": "Artifact id/label or a relative/absolute path"},
+            "max_bytes": {"type": "integer", "default": 16384}
+        },
+        "required": ["id_or_path"]
+    }
+}
+
+# Extend ALL_SCHEMAS with artifact helpers
+ALL_SCHEMAS.extend([
+    ARTIFACTS_LIST_SCHEMA,
+    ARTIFACTS_RESOLVE_SCHEMA,
+    ARTIFACTS_SEARCH_SCHEMA,
+    ARTIFACTS_READ_TEXT_SCHEMA,
+])
+
+# === New advanced tool schemas ===
+
+APPLY_PROTEIN_MUTATIONS_SCHEMA = {
+    "name": "apply_protein_mutations",
+    "description": "Apply blind mutations (rep/del/ins) to a protein sequence from a FASTA file; saves mutated FASTA and a text report.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "fasta_file": {"type": "string", "description": "Input FASTA path"},
+            "mutations": {"type": "array", "items": {"type": "string"}, "description": "List of mutation directives (e.g., rep123:V, del10-15, ins46:ISHKR)"},
+            "output_file": {"type": "string", "description": "Output FASTA filename", "default": "mutated.fasta"},
+            "report_file": {"type": "string", "description": "Output report filename", "default": "mutations_report.txt"}
+        },
+        "required": ["fasta_file", "mutations"]
+    }
+}
+
+COMPARE_SOL_PI_SCHEMA = {
+    "name": "compare_solubility_and_pI",
+    "description": "Compare GRAVY (hydropathy) and isoelectric point between wild-type and mutant FASTA sequences and save a report.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "wt_fasta": {"type": "string", "description": "Wild-type FASTA"},
+            "mut_fasta": {"type": "string", "description": "Mutant FASTA"},
+            "output_file": {"type": "string", "description": "Output report filename", "default": "solubility_pI_comparison.txt"}
+        },
+        "required": ["wt_fasta", "mut_fasta"]
+    }
+}
+
+STRUCTURAL_ALIGNMENT_SCHEMA = {
+    "name": "structural_alignment",
+    "description": "Align two PDB structures by CA atoms; optionally save aligned PDBs and return RMSD.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "pdb1_path": {"type": "string", "description": "Reference PDB path"},
+            "pdb2_path": {"type": "string", "description": "Mobile PDB path"},
+            "save_aligned": {"type": "boolean", "default": True},
+            "out1": {"type": "string", "default": "aligned_ref.pdb"},
+            "out2": {"type": "string", "default": "aligned_mob.pdb"}
+        },
+        "required": ["pdb1_path", "pdb2_path"]
+    }
+}
+
+COMPARE_STABILITY_SIMPLE_SCHEMA = {
+    "name": "compare_stability_simple",
+    "description": "Crude thermodynamic stability comparison between WT and mutant PDBs; writes a plain-text report.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "pdb_wt": {"type": "string"},
+            "pdb_mut": {"type": "string"},
+            "report_name": {"type": "string", "default": "stability_comparison.txt"}
+        },
+        "required": ["pdb_wt", "pdb_mut"]
+    }
+}
+
+DOWNLOAD_PDBS_SCHEMA = {
+    "name": "download_pdb_structures_for_protein",
+    "description": "Download all experimental PDBs for a gene/protein (based on UniProt cross-references).",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "gene": {"type": "string", "description": "Gene/protein symbol"},
+            "organism": {"type": "string", "default": "human"}
+        },
+        "required": ["gene"]
+    }
+}
+
+SMART_VISUALIZE_SCHEMA = {
+    "name": "smart_visualize",
+    "description": "Generate a minimal 3Dmol viewer HTML for a PDB file.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "pdb_file": {"type": "string"},
+            "output_html": {"type": "string", "default": "viewer.html"},
+            "background": {"type": "string", "default": "white"}
+        },
+        "required": ["pdb_file"]
+    }
+}
+
+FETCH_ARTICLES_STRUCTURED_SCHEMA = {
+    "name": "fetch_articles_structured",
+    "description": "Search Semantic Scholar and save PDFs (when open access) plus metadata under an output folder.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "num_pdfs": {"type": "integer", "default": 5},
+            "max_checked": {"type": "integer", "default": 300},
+            "delay": {"type": "number", "default": 2.5}
+        },
+        "required": ["query"]
+    }
+}
+
+FETCH_ARTICLES_DETAILED_SCHEMA = {
+    "name": "fetch_articles_detailed_log",
+    "description": "Semantic Scholar fetch with detailed logging; saves all TXT metadata and open-access PDFs.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "num_pdfs": {"type": "integer", "default": 5},
+            "max_checked": {"type": "integer", "default": 300},
+            "delay": {"type": "number", "default": 2.5}
+        },
+        "required": ["query"]
+    }
+}
+
+GENERATE_COMPREHENSIVE_PREDICTION_SCHEMA = {
+    "name": "generate_comprehensive_prediction",
+    "description": "Run a minimal mutation impact pipeline: download FASTA, apply mutations, compare GRAVY/pI; writes a summary.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "protein_name": {"type": "string"},
+            "mutations": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["protein_name", "mutations"]
+    }
+}
+
+# Alignment function schemas (missing earlier)
+PAIRWISE_ALIGNMENT_SCHEMA = {
+    "name": "pairwise_protein_alignment",
+    "description": "Global pairwise alignment (Needleman–Wunsch) between two protein FASTA sequences; saves a text report.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "fasta1": {"type": "string", "description": "First FASTA file path"},
+            "fasta2": {"type": "string", "description": "Second FASTA file path"},
+            "output_file": {"type": "string", "description": "Output alignment report filename", "default": "alignment.txt"}
+        },
+        "required": ["fasta1", "fasta2"]
+    }
+}
+
+MSA_MAFFT_SCHEMA = {
+    "name": "msa_mafft",
+    "description": "Multiple sequence alignment using MAFFT; provide a list of FASTA files. Returns path to aligned FASTA.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "fasta_files": {"type": "array", "items": {"type": "string"}, "description": "List of input FASTA paths"},
+            "output_prefix": {"type": "string", "description": "Output file prefix (no extension)", "default": "msa"}
+        },
+        "required": ["fasta_files"]
+    }
+}
+
+ALL_SCHEMAS.extend([
+    APPLY_PROTEIN_MUTATIONS_SCHEMA,
+    COMPARE_SOL_PI_SCHEMA,
+    STRUCTURAL_ALIGNMENT_SCHEMA,
+    COMPARE_STABILITY_SIMPLE_SCHEMA,
+    DOWNLOAD_PDBS_SCHEMA,
+    SMART_VISUALIZE_SCHEMA,
+    FETCH_ARTICLES_STRUCTURED_SCHEMA,
+    FETCH_ARTICLES_DETAILED_SCHEMA,
+    GENERATE_COMPREHENSIVE_PREDICTION_SCHEMA,
+    PAIRWISE_ALIGNMENT_SCHEMA,
+    MSA_MAFFT_SCHEMA,
+])
+

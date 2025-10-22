@@ -8,7 +8,12 @@ import sys
 from pathlib import Path
 from typing import Annotated, Dict, List, Optional
 
-from agents import function_tool
+# Optional decorator; if unavailable, define a no-op.
+try:
+    from agents import function_tool  # type: ignore
+except Exception:  # pragma: no cover
+    def function_tool(fn):  # type: ignore
+        return fn
 
 # Ensure we can import llm-agent tools when running from repo root
 SRC_DIR = Path(__file__).resolve().parents[1]
@@ -42,6 +47,16 @@ from tools import (
     get_protein_function as _get_protein_function,
     fetch_and_extract_hpa as _fetch_and_extract_hpa,
     generate_gene_report_pdf as _generate_gene_report_pdf,
+    # New tools
+    apply_protein_mutations as _apply_protein_mutations,
+    compare_solubility_and_pI as _compare_solubility_and_pI,
+    structural_alignment as _structural_alignment,
+    compare_stability_simple as _compare_stability_simple,
+    download_pdb_structures_for_protein as _download_pdb_structures_for_protein,
+    smart_visualize as _smart_visualize,
+    fetch_articles_structured as _fetch_articles_structured,
+    fetch_articles_detailed_log as _fetch_articles_detailed_log,
+    generate_comprehensive_prediction as _generate_comprehensive_prediction,
 )
 
 # Artifacts registry utilities
@@ -237,13 +252,25 @@ def pairwise_protein_alignment(fasta1: Annotated[str, "First FASTA"], fasta2: An
 
 
 @function_tool
-def msa_mafft(input_fasta: Annotated[str, "Input multi-FASTA"], output_file: Annotated[str, "Output aligned FASTA"] = "aligned.fasta") -> str:
+def msa_mafft(
+    fasta_files: Annotated[List[str], "List of input FASTA file paths"],
+    output_prefix: Annotated[str, "Output prefix (without extension)"] = "msa",
+) -> str:
+    """Run MAFFT on a list of FASTA files and save alignment + log into the session directory.
+
+    Returns the aligned FASTA path as text; also registers the log file as an artifact.
+    """
     run_dir = _get_run_dir()
-    out = _ensure_unique_path(str(run_dir / Path(output_file).name))
-    res = _msa_mafft(input_fasta, str(out))
-    if isinstance(res, str) and Path(res).exists():
-        _register_artifact(res, type="fasta", label="msa_mafft")
-    return res
+    # Ensure MAFFT writes into the current run directory
+    try:
+        fasta_path, log_path = _msa_mafft(fasta_files, output_prefix=output_prefix, output_dir=str(run_dir))
+    except Exception as e:
+        return f"MSA failed: {e}"
+    if fasta_path and Path(fasta_path).exists():
+        _register_artifact(fasta_path, type="fasta", label="msa_alignment")
+    if log_path and Path(log_path).exists():
+        _register_artifact(log_path, type="txt", label="msa_log")
+    return str(fasta_path)
 
 
 @function_tool
@@ -512,3 +539,202 @@ def artifacts_search(name_substring: Annotated[str, "Case-insensitive substring 
     for it in items:
         lines.append(f"- {it['id']} [{it['type']}] {it['path']} {('('+it['label']+')') if it.get('label') else ''}")
     return "\n".join(lines)
+
+
+@function_tool
+def artifacts_read_text(id_or_path: Annotated[str, "Artifact id/label or absolute/relative path"], max_bytes: Annotated[int, "Max bytes to read"] = 16384) -> str:
+    """Read a small text artifact for the model to quote or summarize.
+
+    Security: Only allows reading files under the current run_dir (outputs/session_*).
+    Binary files are not supported; content is decoded as UTF-8 with replacements.
+    """
+    # Resolve to path via registry; fallback to treating argument as path
+    p = _resolve_artifact(id_or_path)
+    candidate = Path(p or id_or_path)
+    if not candidate.is_absolute():
+        candidate = _get_run_dir() / candidate
+    try:
+        rp = candidate.resolve()
+    except Exception:
+        return "Invalid path."
+    # Constrain to outputs root
+    outputs_root = Path(__file__).resolve().parents[2] / "outputs"
+    try:
+        rp.relative_to(outputs_root.resolve())
+    except Exception:
+        return "Access denied: path is outside outputs directory."
+    if not rp.exists() or not rp.is_file():
+        return "File not found."
+    try:
+        with rp.open("rb") as f:
+            data = f.read(int(max(1, min(max_bytes, 2_000_000))))
+        text = data.decode("utf-8", errors="replace")
+        if len(data) >= max_bytes:
+            return f"(truncated to {max_bytes} bytes)\n" + text
+        return text
+    except Exception as e:
+        return f"Could not read file: {e}"
+
+
+# ============== New advanced tools wrappers ==============
+
+@function_tool
+def apply_protein_mutations(
+    fasta_file: Annotated[str, "Input FASTA"],
+    mutations: Annotated[List[str], "List of mutation directives"],
+    output_file: Annotated[str, "Output FASTA filename"] = "mutated.fasta",
+    report_file: Annotated[str, "Mutation report filename"] = "mutations_report.txt",
+) -> str:
+    run_dir = _get_run_dir()
+    out_fa = _ensure_unique_path(str(run_dir / Path(output_file).name))
+    out_rep = _ensure_unique_path(str(run_dir / Path(report_file).name))
+    rec = _apply_protein_mutations(fasta_file, mutations, output_fasta=str(out_fa), report_path=str(out_rep))
+    _register_artifact(str(out_fa), type="fasta", label="mutated_fasta")
+    _register_artifact(str(out_rep), type="txt", label="mutation_report")
+    return f"Mutations applied. FASTA: {out_fa}\nReport: {out_rep}"
+
+
+@function_tool
+def compare_solubility_and_pI(
+    wt_fasta: Annotated[str, "Wild-type FASTA"],
+    mut_fasta: Annotated[str, "Mutant FASTA"],
+    output_file: Annotated[str, "Output report filename"] = "solubility_pI_comparison.txt",
+) -> str:
+    run_dir = _get_run_dir()
+    out = _ensure_unique_path(str(run_dir / Path(output_file).name))
+    res = _compare_solubility_and_pI(wt_fasta, mut_fasta, output_file=str(out))
+    _register_artifact(str(out), type="txt", label="solubility_pI")
+    return f"Comparison report saved to: {out}"
+
+
+@function_tool
+def structural_alignment(
+    pdb1_path: Annotated[str, "Reference PDB"],
+    pdb2_path: Annotated[str, "Mobile PDB"],
+    save_aligned: Annotated[bool, "Save aligned PDBs"] = True,
+    out1: Annotated[str, "Aligned ref filename"] = "aligned_ref.pdb",
+    out2: Annotated[str, "Aligned mob filename"] = "aligned_mob.pdb",
+) -> str:
+    run_dir = _get_run_dir()
+    o1 = _ensure_unique_path(str(run_dir / Path(out1).name))
+    o2 = _ensure_unique_path(str(run_dir / Path(out2).name))
+    rmsd, a1, a2 = _structural_alignment(pdb1_path, pdb2_path, save_aligned=save_aligned, out1=str(o1), out2=str(o2))
+    if a1:
+        _register_artifact(str(a1), type="pdb", label="aligned_ref")
+    if a2:
+        _register_artifact(str(a2), type="pdb", label="aligned_mob")
+    return f"Structural alignment RMSD: {rmsd:.3f} Å\nAligned files: {a1 or ''} , {a2 or ''}"
+
+
+@function_tool
+def compare_stability_simple(
+    pdb_wt: Annotated[str, "WT PDB"],
+    pdb_mut: Annotated[str, "Mutant PDB"],
+    report_name: Annotated[str, "Output report filename"] = "stability_comparison.txt",
+) -> str:
+    run_dir = _get_run_dir()
+    out = _ensure_unique_path(str(run_dir / Path(report_name).name))
+    path = _compare_stability_simple(pdb_wt, pdb_mut, output_dir=str(Path(out).parent), report_name=Path(out).name)
+    _register_artifact(str(path), type="txt", label="stability")
+    return f"Stability report saved to: {path}"
+
+
+@function_tool
+def download_pdb_structures_for_protein(
+    gene: Annotated[str, "Gene/protein symbol"],
+    organism: Annotated[str, "Organism name"] = "human",
+) -> str:
+    run_dir = _get_run_dir()
+    folder = _download_pdb_structures_for_protein(gene, organism=organism, output_dir=str(run_dir))
+    if not folder:
+        return "No PDB structures found or download failed."
+    # Register all PDBs inside
+    p = Path(folder)
+    count = 0
+    for f in p.glob("*.pdb"):
+        _register_artifact(str(f), type="pdb", label=f"pdb_{f.stem}")
+        count += 1
+    return f"Downloaded {count} PDB files into: {folder}"
+
+
+@function_tool
+def smart_visualize(
+    pdb_file: Annotated[str, "PDB to visualize"],
+    output_html: Annotated[str, "Output HTML filename"] = "viewer.html",
+    background: Annotated[str, "Background color"] = "white",
+) -> str:
+    run_dir = _get_run_dir()
+    out = _ensure_unique_path(str(run_dir / Path(output_html).name))
+    html = _smart_visualize(pdb_file, output_html=str(out), background=background)
+    _register_artifact(str(html), type="html", label="viewer")
+    return f"Viewer saved to: {html}"
+
+
+@function_tool
+def fetch_articles_structured(
+    query: Annotated[str, "Search query"],
+    num_pdfs: Annotated[int, "Target PDFs"] = 5,
+    max_checked: Annotated[int, "Max articles to check"] = 300,
+    delay: Annotated[float, "Seconds between batches"] = 2.5,
+) -> str:
+    run_dir = _get_run_dir()
+    folder = _fetch_articles_structured(query, num_pdfs=num_pdfs, max_checked=max_checked, delay=delay, output_dir=str(run_dir))
+    # Register PDFs and TXTs
+    p = Path(folder)
+    n_pdf = 0
+    for f in list(p.glob("pdf/*.pdf")) + list(p.glob("*.pdf")):
+        _register_artifact(str(f), type="pdf", label=f"paper_{f.stem}")
+        n_pdf += 1
+    for t in list(p.glob("txt/*.txt")) + list(p.glob("*.txt")):
+        _register_artifact(str(t), type="txt", label=f"meta_{t.stem}")
+    return f"Articles saved under {folder} (PDFs: {n_pdf})."
+
+
+@function_tool
+def fetch_articles_detailed_log(
+    query: Annotated[str, "Search query"],
+    num_pdfs: Annotated[int, "Target PDFs"] = 5,
+    max_checked: Annotated[int, "Max articles to check"] = 300,
+    delay: Annotated[float, "Seconds between batches"] = 2.5,
+) -> str:
+    run_dir = _get_run_dir()
+    folder = _fetch_articles_detailed_log(query, num_pdfs=num_pdfs, max_checked=max_checked, delay=delay, output_dir=str(run_dir))
+    p = Path(folder)
+    for f in p.glob("*.pdf"):
+        _register_artifact(str(f), type="pdf", label=f"paper_{f.stem}")
+    for t in p.glob("*.txt"):
+        _register_artifact(str(t), type="txt", label=f"meta_{t.stem}")
+    return f"Detailed logs and files saved under {folder}."
+
+
+@function_tool
+def generate_comprehensive_prediction(
+    protein_name: Annotated[str, "Gene/protein symbol"],
+    mutations: Annotated[List[str], "Mutation directives"],
+) -> str:
+    run_dir = _get_run_dir()
+    res = _generate_comprehensive_prediction(protein_name, mutations, output_dir=str(run_dir))
+    if isinstance(res, dict) and res.get("error"):
+        return f"Pipeline failed: {res['error']}"
+    # Register key files if present
+    if isinstance(res, dict):
+        for k in ["wt_fasta", "mut_fasta", "mutation_report", "solubility_report", "summary"]:
+            v = res.get(k)
+            if v and Path(v).exists():
+                ext = Path(v).suffix.lstrip('.') or 'txt'
+                _register_artifact(v, type=ext, label=f"pipeline_{k}")
+        return f"Pipeline completed. Folder: {res.get('folder')}"
+    return str(res)
+
+# Now that all tools are defined, extend ALL_TOOLS with advanced ones
+ALL_TOOLS.extend([
+    apply_protein_mutations,
+    compare_solubility_and_pI,
+    structural_alignment,
+    compare_stability_simple,
+    download_pdb_structures_for_protein,
+    smart_visualize,
+    fetch_articles_structured,
+    fetch_articles_detailed_log,
+    generate_comprehensive_prediction,
+])

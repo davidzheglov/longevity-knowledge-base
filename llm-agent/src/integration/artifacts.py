@@ -55,6 +55,19 @@ def start_session(run_dir: Optional[str] = None, label: Optional[str] = None) ->
     _save_registry()
     return rd
 
+def switch_session(run_dir: str) -> Path:
+    """Switch the current artifact session directory without clearing registry.
+
+    If the directory doesn't exist, it will be created. If an artifacts.json exists,
+    it will be loaded; otherwise the registry will remain empty until artifacts are added.
+    """
+    rd = Path(run_dir)
+    rd.mkdir(parents=True, exist_ok=True)
+    _SESSION["run_dir"] = rd
+    # Load existing registry if present (does not clear)
+    _load_registry()
+    return rd
+
 
 def _registry_file() -> Path:
     return get_run_dir() / "artifacts.json"

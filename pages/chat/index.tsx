@@ -11,7 +11,8 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function ChatPage(){
-  type ChatMessage = { id: number; role: 'user' | 'assistant'; content: string };
+  type Artifact = { id: string; label?: string; type?: string; path?: string; name?: string; size?: number; url?: string };
+  type ChatMessage = { id: number; role: 'user' | 'assistant'; content: string; artifacts?: Artifact[] };
   type ChatSession = { id: string | number; title?: string; preview?: string; _optimistic?: boolean };
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -55,7 +56,7 @@ export default function ChatPage(){
     return ()=> { mounted = false; };
   },[me]);
 
-  function createSession(){
+  async function createSession(): Promise<ChatSession>{
     const tempId = `temp-${Date.now()}`;
     const s: ChatSession = { id: tempId, title: 'New Session', preview: '', _optimistic: true };
     const next: ChatSession[] = [s, ...sessions];
@@ -68,18 +69,31 @@ export default function ChatPage(){
 
     // persist: if logged in, POST to server; otherwise save to sessionStorage
     if (me && me.id){
-      fetch('/api/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ title: s.title }) }).then(async r=>{
-        if (!r.ok) throw new Error('create failed');
-        const data = await r.json();
-        const created: ChatSession = (data && (data.id ? data : data.chat)) || s;
-        setSessions((prev: ChatSession[]) => [created, ...prev.filter((x)=> x.id !== tempId)]);
-        setActive(created);
-      }).catch(()=>{
-        // keep optimistic item if server failed
-      });
+      try{
+        const r = await fetch('/api/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ title: s.title }) });
+        if (r.ok){
+          const data = await r.json();
+          const created: ChatSession = (data && (data.id ? data : data.chat)) || s;
+          setSessions((prev: ChatSession[]) => [created, ...prev.filter((x)=> x.id !== tempId)]);
+          setActive(created);
+          return created;
+        }
+      }catch(e){/* ignore, keep optimistic */}
     } else {
-      sessionStorage.setItem('visitor_chats', JSON.stringify(next));
+      try{ sessionStorage.setItem('visitor_chats', JSON.stringify(next)); }catch(e){}
     }
+    return s;
+  }
+
+  function guessTitleFrom(text: string): string{
+    const clean = (text || '').replace(/\s+/g, ' ').trim();
+    if (!clean) return 'New Session';
+    const words = clean.split(' ').slice(0, 10);
+    let title = words.join(' ');
+    if (title.length > 64) title = title.slice(0, 61) + '…';
+    // capitalize first letter
+    title = title.charAt(0).toUpperCase() + title.slice(1);
+    return title;
   }
 
   async function deleteSession(id: string | number){
@@ -98,14 +112,32 @@ export default function ChatPage(){
   }
 
   async function onSend(text: string){
-    if (!active) return;
+    // If no active session, create one first
+    let session = active;
+    if (!session){
+      session = await createSession();
+    }
     const userMsg: ChatMessage = { id: Date.now(), role: 'user', content: text };
     setMessages((m: ChatMessage[]) => [...m, userMsg]);
+
+    // If this is the first message of the session, set a reasonable title
+    if (!session?.preview || session?._optimistic || session?.title === 'New Session'){
+      const newTitle = guessTitleFrom(text);
+      const sid = session!.id;
+      setSessions((list: ChatSession[]) => list.map((s) => s.id===sid ? ({...s, title: newTitle}) : s));
+      if (me && me.id && typeof sid === 'number'){
+        // fire-and-forget
+        fetch(`/api/chats/${sid}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ title: newTitle }) }).catch(()=>{});
+      } else {
+        // store guest list
+        try{ sessionStorage.setItem('visitor_chats', JSON.stringify(sessions.map((s: ChatSession) => s.id===sid? ({...s, title: newTitle}) : s))); }catch(e){}
+      }
+    }
     try{
       const resp = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, sessionId: String(active.id) })
+        body: JSON.stringify({ message: text, sessionId: String((session as ChatSession).id) })
       });
       if (!resp.ok){
         const err = await resp.json().catch(()=>({error:'failed'}));
@@ -113,13 +145,15 @@ export default function ChatPage(){
         setMessages((m: ChatMessage[]) => [...m,{ id: Date.now()+1, role: 'assistant', content: 'Sorry, I had an issue processing that.' }]);
         return;
       }
-      const data = await resp.json();
-      const content = (data?.output as string) || 'No output';
-      setMessages((m: ChatMessage[]) => [...m, { id: Date.now()+2, role: 'assistant', content }]);
+  const data = await resp.json();
+  const content = (data?.output as string) || 'No output';
+  const artifacts: Artifact[] = Array.isArray(data?.artifacts) ? data.artifacts : [];
+  setMessages((m: ChatMessage[]) => [...m, { id: Date.now()+2, role: 'assistant', content, artifacts }]);
       // update session preview/title optimistically
-      setSessions((list: ChatSession[]) => list.map((s) => s.id===active.id ? ({...s, preview: content.slice(0,120)}) : s));
+      const sid = (session as ChatSession).id;
+      setSessions((list: ChatSession[]) => list.map((s) => s.id===sid ? ({...s, preview: content.slice(0,120)}) : s));
       if (!me || !me.id){
-  try{ sessionStorage.setItem('visitor_chats', JSON.stringify(sessions.map((s: ChatSession) => s.id===active.id? ({...s, preview: content.slice(0,120)}) : s))); }catch(e){}
+        try{ sessionStorage.setItem('visitor_chats', JSON.stringify(sessions.map((s: ChatSession) => s.id===sid? ({...s, preview: content.slice(0,120)}) : s))); }catch(e){}
       }
     }catch(e:any){
       toast.error('Network error talking to agent');

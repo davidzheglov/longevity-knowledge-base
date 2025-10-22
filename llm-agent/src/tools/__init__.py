@@ -38,6 +38,17 @@ from .uniprot_utils import (
 
 # Proteomics tools
 from .proteomics import generate_gene_report_pdf
+from .mutations_advanced import apply_protein_mutations
+from .analysis import compare_solubility_and_pI
+from .structure import (
+    structural_alignment,
+    simple_stability_score,
+    compare_stability_simple,
+    download_pdb_structures_for_protein,
+    smart_visualize,
+)
+from .literature import fetch_articles_structured, fetch_articles_detailed_log
+from .pipeline import generate_comprehensive_prediction
 
 __version__ = "1.0.0"
 
@@ -88,4 +99,18 @@ __all__ = [
     "fetch_and_extract_hpa",
     # Proteomics
     "generate_gene_report_pdf",
+    # Advanced mutations & analysis
+    "apply_protein_mutations",
+    "compare_solubility_and_pI",
+    # Structural
+    "structural_alignment",
+    "simple_stability_score",
+    "compare_stability_simple",
+    "download_pdb_structures_for_protein",
+    "smart_visualize",
+    # Literature
+    "fetch_articles_structured",
+    "fetch_articles_detailed_log",
+    # Pipeline
+    "generate_comprehensive_prediction",
 ]
