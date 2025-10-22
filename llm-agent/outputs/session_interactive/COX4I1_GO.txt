@@ -1,0 +1,14 @@
+Gene: COX4I1
+Cellular Component	GO:0005829	cytosol
+Cellular Component	GO:0016020	membrane
+Cellular Component	GO:0005743	mitochondrial inner membrane
+Cellular Component	GO:0005758	mitochondrial intermembrane space
+Cellular Component	GO:0031966	mitochondrial membrane
+Cellular Component	GO:0005739	mitochondrion
+Cellular Component	GO:0005654	nucleoplasm
+Cellular Component	GO:0045277	respiratory chain complex IV
+Molecular Function	GO:0004129	cytochrome-c oxidase activity
+Biological Process	GO:0045333	cellular respiration
+Biological Process	GO:0006091	generation of precursor metabolites and energy
+Biological Process	GO:0006123	mitochondrial electron transport, cytochrome c to oxygen
+Biological Process	GO:0007584	response to nutrient

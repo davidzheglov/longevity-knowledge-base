@@ -1,0 +1,17 @@
+Gene: NRF2
+Cellular Component	GO:0000785	chromatin
+Cellular Component	GO:0005654	nucleoplasm
+Cellular Component	GO:0005634	nucleus
+Molecular Function	GO:0003682	chromatin binding
+Molecular Function	GO:0001228	DNA-binding transcription activator activity, RNA polymerase II-specific
+Molecular Function	GO:0003700	DNA-binding transcription factor activity
+Molecular Function	GO:0000981	DNA-binding transcription factor activity, RNA polymerase II-specific
+Molecular Function	GO:0000978	RNA polymerase II cis-regulatory region sequence-specific DNA binding
+Molecular Function	GO:1990837	sequence-specific double-stranded DNA binding
+Molecular Function	GO:0000976	transcription cis-regulatory region binding
+Biological Process	GO:0001825	blastocyst formation
+Biological Process	GO:0030154	cell differentiation
+Biological Process	GO:0045653	negative regulation of megakaryocyte differentiation
+Biological Process	GO:0000122	negative regulation of transcription by RNA polymerase II
+Biological Process	GO:0045944	positive regulation of transcription by RNA polymerase II
+Biological Process	GO:0006357	regulation of transcription by RNA polymerase II

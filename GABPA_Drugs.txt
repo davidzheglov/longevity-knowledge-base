@@ -1,0 +1,5 @@
+Gene: GABPA
+UniProt Accession: Q06546
+============================================================
+
+No DrugBank annotations found.

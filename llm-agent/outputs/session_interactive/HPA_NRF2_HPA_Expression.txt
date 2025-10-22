@@ -1,0 +1,11 @@
+TISSUE RNA EXPRESSION
+Tissue specificity	Low tissue specificity
+
+CELL TYPE RNA EXPRESSION
+Single cell type specificity	Low cell type specificity
+
+CANCER & CELL LINES
+Prognostic summary	GABPA is a prognostic marker in Kidney renal clear cell carcinoma
+
+PROTEIN EXPRESSION AND LOCALIZATION
+Predicted location	Intracellular

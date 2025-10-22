@@ -11,9 +11,12 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function ChatPage(){
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [active, setActive] = useState<any|null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  type ChatMessage = { id: number; role: 'user' | 'assistant'; content: string };
+  type ChatSession = { id: string | number; title?: string; preview?: string; _optimistic?: boolean };
+
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [active, setActive] = useState<ChatSession|null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const composerRef = useRef<any>(null);
   const [me, setMe] = useState<any>(null);
 
@@ -31,21 +34,21 @@ export default function ChatPage(){
           if (res.ok){
             const data = await res.json();
             // Accept either an array or { chats: [] }
-            const list = Array.isArray(data) ? data : (Array.isArray(data?.chats) ? data.chats : []);
+            const list: ChatSession[] = Array.isArray(data) ? data : (Array.isArray(data?.chats) ? data.chats : []);
             setSessions(list);
           } else {
             const raw = sessionStorage.getItem('visitor_chats');
-            setSessions(raw ? JSON.parse(raw) : []);
+            setSessions(raw ? (JSON.parse(raw) as ChatSession[]) : []);
           }
         } else {
           // guest: use sessionStorage-only list
           const raw = sessionStorage.getItem('visitor_chats');
-          setSessions(raw ? JSON.parse(raw) : []);
+          setSessions(raw ? (JSON.parse(raw) as ChatSession[]) : []);
         }
       }catch(err){
         const raw = sessionStorage.getItem('visitor_chats');
         if (!mounted) return;
-        setSessions(raw ? JSON.parse(raw) : []);
+        setSessions(raw ? (JSON.parse(raw) as ChatSession[]) : []);
       }
     }
     load();
@@ -54,8 +57,8 @@ export default function ChatPage(){
 
   function createSession(){
     const tempId = `temp-${Date.now()}`;
-    const s: any = { id: tempId, title: 'New Session', preview: '', _optimistic: true };
-    const next = [s, ...sessions];
+    const s: ChatSession = { id: tempId, title: 'New Session', preview: '', _optimistic: true };
+    const next: ChatSession[] = [s, ...sessions];
     setSessions(next);
     setActive(s);
     setMessages([]);
@@ -68,8 +71,8 @@ export default function ChatPage(){
       fetch('/api/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ title: s.title }) }).then(async r=>{
         if (!r.ok) throw new Error('create failed');
         const data = await r.json();
-        const created = data && (data.id ? data : data.chat) || s;
-        setSessions(prev => [created, ...prev.filter((x:any)=> x.id !== tempId)]);
+        const created: ChatSession = (data && (data.id ? data : data.chat)) || s;
+        setSessions((prev: ChatSession[]) => [created, ...prev.filter((x)=> x.id !== tempId)]);
         setActive(created);
       }).catch(()=>{
         // keep optimistic item if server failed
@@ -79,27 +82,49 @@ export default function ChatPage(){
     }
   }
 
-  async function deleteSession(id:any){
+  async function deleteSession(id: string | number){
     if (me && me.id){
       try{
         await fetch(`/api/chats/${id}`, { method: 'DELETE', credentials: 'include' });
       }catch(e){}
-      setSessions(s=> s.filter((x:any)=> x.id !== id));
+  setSessions((s: ChatSession[]) => s.filter((x: ChatSession) => x.id !== id));
       if (active?.id === id) setActive(null);
     } else {
-      const next = sessions.filter((x:any)=> x.id !== id);
+  const next: ChatSession[] = sessions.filter((x: ChatSession) => x.id !== id);
       setSessions(next);
       sessionStorage.setItem('visitor_chats', JSON.stringify(next));
       if (active?.id === id) setActive(null);
     }
   }
 
-  function onSend(text:string){
+  async function onSend(text: string){
     if (!active) return;
-    const u = { id: Date.now(), role: 'user', content: text };
-    setMessages(m=>[...m,u]);
-    // optimistic assistant reply
-    setTimeout(()=> setMessages(m=>[...m,{ id: Date.now()+1, role: 'assistant', content: 'Received: ' + text }]), 900 + Math.random()*600);
+    const userMsg: ChatMessage = { id: Date.now(), role: 'user', content: text };
+    setMessages((m: ChatMessage[]) => [...m, userMsg]);
+    try{
+      const resp = await fetch('/api/agent/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, sessionId: String(active.id) })
+      });
+      if (!resp.ok){
+        const err = await resp.json().catch(()=>({error:'failed'}));
+        toast.error('Agent error: ' + (err?.error || resp.statusText));
+        setMessages((m: ChatMessage[]) => [...m,{ id: Date.now()+1, role: 'assistant', content: 'Sorry, I had an issue processing that.' }]);
+        return;
+      }
+      const data = await resp.json();
+      const content = (data?.output as string) || 'No output';
+      setMessages((m: ChatMessage[]) => [...m, { id: Date.now()+2, role: 'assistant', content }]);
+      // update session preview/title optimistically
+      setSessions((list: ChatSession[]) => list.map((s) => s.id===active.id ? ({...s, preview: content.slice(0,120)}) : s));
+      if (!me || !me.id){
+  try{ sessionStorage.setItem('visitor_chats', JSON.stringify(sessions.map((s: ChatSession) => s.id===active.id? ({...s, preview: content.slice(0,120)}) : s))); }catch(e){}
+      }
+    }catch(e:any){
+      toast.error('Network error talking to agent');
+      setMessages((m: ChatMessage[]) => [...m,{ id: Date.now()+3, role: 'assistant', content: 'Network error talking to agent.' }]);
+    }
   }
 
   return (

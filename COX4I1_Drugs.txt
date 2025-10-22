@@ -1,0 +1,8 @@
+Gene: COX4I1
+UniProt Accession: P13073
+============================================================
+
+## DrugBank Annotations
+DB02659: Cholic Acid
+DB04464: N-Formylmethionine
+

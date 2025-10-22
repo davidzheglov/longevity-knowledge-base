@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  agent:
+    build:
+      context: ./llm-agent
+      dockerfile: Dockerfile
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - ./llm-agent/outputs:/app/llm-agent/outputs
+      - ./llm-agent/data:/app/llm-agent/data:ro
+    working_dir: /app/llm-agent/src
+    command: ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - AGENT_API_URL=http://agent:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - agent

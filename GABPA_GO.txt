@@ -1,0 +1,26 @@
+Gene: GABPA
+UniProt Accession: Q06546
+============================================================
+
+## Molecular Function
+GO:0003682: chromatin binding
+GO:0001228: DNA-binding transcription activator activity, RNA polymerase II-specific
+GO:0003700: DNA-binding transcription factor activity
+GO:0000981: DNA-binding transcription factor activity, RNA polymerase II-specific
+GO:0000978: RNA polymerase II cis-regulatory region sequence-specific DNA binding
+GO:1990837: sequence-specific double-stranded DNA binding
+GO:0000976: transcription cis-regulatory region binding
+
+## Biological Process
+GO:0001825: blastocyst formation
+GO:0030154: cell differentiation
+GO:0045653: negative regulation of megakaryocyte differentiation
+GO:0000122: negative regulation of transcription by RNA polymerase II
+GO:0045944: positive regulation of transcription by RNA polymerase II
+GO:0006357: regulation of transcription by RNA polymerase II
+
+## Cellular Component
+GO:0000785: chromatin
+GO:0005654: nucleoplasm
+GO:0005634: nucleus
+
