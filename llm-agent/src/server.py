@@ -36,6 +36,7 @@ _outputs_dir: Path | None = None
 
 
 def _format_history(history: List[Tuple[str, str]], max_turns: int = 8, max_chars: int = 4000) -> str:
+    """Legacy: produces a single text block from prior turns (kept for reference)."""
     if not history:
         return ""
     hist = history[-max_turns:]
@@ -50,6 +51,37 @@ def _format_history(history: List[Tuple[str, str]], max_turns: int = 8, max_char
     return ctx + "\n\n"
 
 
+def _build_context_messages(history: List[Tuple[str, str]], max_turns: int = 8, max_chars: int = 8000) -> List[dict]:
+    """Builds a structured chat history for the LLM from the last N turns.
+
+    Trims to max_turns pairs, and soft-clamps total characters to avoid excessively long prompts.
+    """
+    if not history:
+        return []
+    hist = history[-max_turns:]
+    msgs: List[dict] = []
+    total = 0
+    for u, a in hist:
+        u_text = str(u or "")
+        a_text = str(a or "")
+        # Append and track length; if we exceed max_chars, truncate earliest content
+        msgs.append({"role": "user", "content": u_text})
+        msgs.append({"role": "assistant", "content": a_text})
+        total += len(u_text) + len(a_text)
+    # If over max_chars, drop from the start (oldest) until under budget
+    if total > max_chars:
+        # Remove oldest pairs while tracking remaining length
+        cur = []
+        cur_total = 0
+        for m in reversed(msgs):  # start from newest
+            cur.append(m)
+            cur_total += len(m.get("content") or "")
+            if cur_total >= max_chars:
+                break
+        msgs = list(reversed(cur))
+    return msgs
+
+
 @app.on_event("startup")
 async def _startup() -> None:
     # Initialize the agent once on startup
@@ -57,9 +89,9 @@ async def _startup() -> None:
     _agent = LongevityAgent()
 
     # Mount static serving for artifacts under /outputs
-    # outputs directory is llm-agent/outputs relative to this file
     global _outputs_dir
-    _outputs_dir = Path(__file__).resolve().parents[2] / "outputs"
+    # Prefer env override for consistency with artifacts module
+    _outputs_dir = Path(os.getenv("AGENT_OUTPUT_DIR") or (Path(__file__).resolve().parents[2] / "outputs"))
     _outputs_dir.mkdir(parents=True, exist_ok=True)
     try:
         app.mount("/outputs", StaticFiles(directory=str(_outputs_dir), html=False), name="outputs")
@@ -84,8 +116,8 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse:
     # Session handling and light memory
     session_id = req.session_id or "default"
     hist = _history.get(session_id, [])
-    ctx = _format_history(hist)
-    prompt = f"{ctx}{req.message}" if ctx else req.message
+    # Build proper structured history for the agent instead of stuffing into a single user message
+    pre_msgs = _build_context_messages(hist)
 
     # Ensure artifacts are isolated per session without clearing previous records
     # Sanitize session id to be filesystem-safe
@@ -101,7 +133,7 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse:
         pass
 
     try:
-        output = _agent.chat(prompt) or ""
+        output = _agent.chat(req.message, pre_messages=pre_msgs) or ""
     except Exception as e:  # pragma: no cover
         raise HTTPException(status_code=500, detail=f"agent_failed: {e}")
 

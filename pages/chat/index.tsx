@@ -21,8 +21,15 @@ export default function ChatPage(){
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const composerRef = useRef<any>(null);
   const [me, setMe] = useState<any>(null);
+  const [meResolved, setMeResolved] = useState<boolean>(false);
 
-  useEffect(()=>{ fetch('/api/auth/me', { credentials: 'include' }).then(r=>r.json()).then(d=>{ if (d?.user) setMe(d.user); }).catch(()=>{}); },[]);
+  useEffect(()=>{ (async ()=>{
+    try{
+      const r = await fetch('/api/auth/me', { credentials: 'include' });
+      const d = await r.json().catch(()=> ({}));
+      if (d?.user) setMe(d.user);
+    }catch(e){} finally { setMeResolved(true); }
+  })(); },[]);
 
   // load sessions (persisted for logged-in users or sessionStorage for guests)
   useEffect(()=>{
@@ -57,6 +64,44 @@ export default function ChatPage(){
     return ()=> { mounted = false; };
   },[me]);
 
+  function sessionKeyFor(s: ChatSession){
+    return `chat-${String(s.id)}`;
+  }
+
+  async function loadMessagesForSession(s: ChatSession){
+    // Load from DB for authenticated users; from sessionStorage for guests
+    const sid = s.id;
+    if (me && me.id && typeof sid === 'number'){
+      try{
+        const r = await fetch(`/api/chats/${sid}/messages`, { credentials: 'include' });
+        if (!r.ok) throw new Error('Failed to load messages');
+        const list = await r.json();
+        const mapped: ChatMessage[] = (Array.isArray(list)? list:[]).map((m:any)=>{
+          let artifacts: Artifact[] | undefined = undefined;
+          let tools: string[] | undefined = undefined;
+          try{
+            if (m?.metadata){
+              const meta = JSON.parse(m.metadata);
+              if (Array.isArray(meta?.artifacts)) artifacts = meta.artifacts;
+              if (Array.isArray(meta?.tools)) tools = meta.tools;
+            }
+          }catch(e){}
+          return { id: m.id, role: (m.role==='assistant'?'assistant':'user'), content: m.content || '', artifacts, tools } as ChatMessage;
+        });
+        setMessages(mapped);
+        return;
+      }catch(e){ /* fallback to empty */ }
+    } else {
+      try{
+        const raw = sessionStorage.getItem(`visitor_messages_${sessionKeyFor(s)}`);
+        const arr = raw ? JSON.parse(raw) as ChatMessage[] : [];
+        setMessages(arr);
+        return;
+      }catch(e){ setMessages([]); }
+    }
+    setMessages([]);
+  }
+
   async function createSession(): Promise<ChatSession>{
     const tempId = `temp-${Date.now()}`;
     const s: ChatSession = { id: tempId, title: 'New Session', preview: '', _optimistic: true };
@@ -77,11 +122,13 @@ export default function ChatPage(){
           const created: ChatSession = (data && (data.id ? data : data.chat)) || s;
           setSessions((prev: ChatSession[]) => [created, ...prev.filter((x)=> x.id !== tempId)]);
           setActive(created);
+          await loadMessagesForSession(created);
           return created;
         }
       }catch(e){/* ignore, keep optimistic */}
     } else {
       try{ sessionStorage.setItem('visitor_chats', JSON.stringify(next)); }catch(e){}
+      try{ sessionStorage.setItem(`visitor_messages_${sessionKeyFor(s)}`, JSON.stringify([])); }catch(e){}
     }
     return s;
   }
@@ -108,6 +155,7 @@ export default function ChatPage(){
   const next: ChatSession[] = sessions.filter((x: ChatSession) => x.id !== id);
       setSessions(next);
       sessionStorage.setItem('visitor_chats', JSON.stringify(next));
+      try{ sessionStorage.removeItem(`visitor_messages_chat-${String(id)}`);}catch(e){}
       if (active?.id === id) setActive(null);
     }
   }
@@ -117,6 +165,14 @@ export default function ChatPage(){
     // If no active session, create one first
     let session = active;
     if (!session){
+      // Try to resolve auth before first send to avoid temp sessions for logged-in users
+      if (!meResolved){
+        try{
+          const r = await fetch('/api/auth/me', { credentials: 'include' });
+          const d = await r.json().catch(()=> ({}));
+          if (d?.user) setMe(d.user);
+        }catch(e){} finally { setMeResolved(true); }
+      }
       session = await createSession();
       try { console.log('[chat] created session', session); } catch {}
     }
@@ -124,6 +180,20 @@ export default function ChatPage(){
   const userMsg: ChatMessage = { id: userMsgId, role: 'user', content: text };
   const pendingId = userMsgId + 1;
   setMessages((m: ChatMessage[]) => [...m, userMsg, { id: pendingId, role: 'assistant', content: '', thinking: true }]);
+
+    // Persist user message if authenticated; else cache for guest
+    const sid = (session as ChatSession).id;
+    if (me && me.id && typeof sid === 'number'){
+      fetch(`/api/chats/${sid}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ role: 'user', content: text, metadata: JSON.stringify({}) }) }).catch(()=>{});
+    } else {
+      try{
+        const key = `visitor_messages_${sessionKeyFor(session as ChatSession)}`;
+        const raw = sessionStorage.getItem(key);
+        const arr = raw ? JSON.parse(raw) : [];
+        arr.push(userMsg);
+        sessionStorage.setItem(key, JSON.stringify(arr));
+      }catch(e){}
+    }
 
     // If this is the first message of the session, set a reasonable title
     if (!session?.preview || session?._optimistic || session?.title === 'New Session'){
@@ -139,10 +209,11 @@ export default function ChatPage(){
       }
     }
     try{
+      const agentSessionId = sessionKeyFor(session as ChatSession);
       const resp = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, sessionId: String((session as ChatSession).id) })
+        body: JSON.stringify({ message: text, sessionId: agentSessionId })
       });
       try { console.log('[chat] /api/agent/chat status', resp.status); } catch {}
       if (!resp.ok){
@@ -157,11 +228,24 @@ export default function ChatPage(){
   const artifacts: Artifact[] = Array.isArray(data?.artifacts) ? data.artifacts : [];
   const tools: string[] = Array.isArray(data?.tools_used) ? data.tools_used : [];
   setMessages((m: ChatMessage[]) => m.map((mm)=> mm.id===pendingId ? ({ ...mm, thinking:false, content, artifacts, tools }) : mm));
+      // Persist assistant message if authenticated; else cache for guest
+      if (me && me.id && typeof sid === 'number'){
+        const metadata = { artifacts, tools };
+        fetch(`/api/chats/${sid}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ role: 'assistant', content, metadata: JSON.stringify(metadata) }) }).catch(()=>{});
+      } else {
+        try{
+          const key = `visitor_messages_${sessionKeyFor(session as ChatSession)}`;
+          const raw = sessionStorage.getItem(key);
+          const arr: ChatMessage[] = raw ? JSON.parse(raw) : [];
+          arr.push({ id: pendingId, role: 'assistant', content, artifacts, tools });
+          sessionStorage.setItem(key, JSON.stringify(arr));
+        }catch(e){}
+      }
       // update session preview/title optimistically
-      const sid = (session as ChatSession).id;
-      setSessions((list: ChatSession[]) => list.map((s) => s.id===sid ? ({...s, preview: content.slice(0,120)}) : s));
+      const sid2 = (session as ChatSession).id;
+      setSessions((list: ChatSession[]) => list.map((s) => s.id===sid2 ? ({...s, preview: content.slice(0,120)}) : s));
       if (!me || !me.id){
-        try{ sessionStorage.setItem('visitor_chats', JSON.stringify(sessions.map((s: ChatSession) => s.id===sid? ({...s, preview: content.slice(0,120)}) : s))); }catch(e){}
+        try{ sessionStorage.setItem('visitor_chats', JSON.stringify(sessions.map((s: ChatSession) => s.id===sid2? ({...s, preview: content.slice(0,120)}) : s))); }catch(e){}
       }
     }catch(e:any){
       try { console.error('[chat] network error', e); } catch {}
@@ -177,7 +261,7 @@ export default function ChatPage(){
         <aside className={styles.left}>
           <div className="p-4">
             <div className={styles.breadcrumb}>Home / Chat</div>
-            <ChatList sessions={sessions} activeId={active?.id||null} onSelect={(s:any)=>{ setActive(s); setMessages([]); }} onCreate={createSession} onNewFocus={()=> composerRef.current?.focus?.()} onDelete={deleteSession} />
+            <ChatList sessions={sessions} activeId={active?.id||null} onSelect={async (s:any)=>{ setActive(s); await loadMessagesForSession(s); }} onCreate={createSession} onNewFocus={()=> composerRef.current?.focus?.()} onDelete={deleteSession} />
           </div>
         </aside>
 

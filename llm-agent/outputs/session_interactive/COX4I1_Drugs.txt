@@ -1,3 +1,0 @@
-Gene: COX4I1
-DB02659: Cholic Acid
-DB04464: N-Formylmethionine

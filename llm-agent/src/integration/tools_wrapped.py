@@ -357,7 +357,13 @@ def generate_brunet_gene_report(gene_query: Annotated[str, "Gene"], output_dir: 
 @function_tool
 def generate_hannum_gene_report(gene_query: Annotated[str, "Gene"], output_dir: Annotated[str, "Output dir"] = ".") -> str:
     run_dir = _get_run_dir()
-    path = _generate_hannum_gene_report(gene_query, output_dir=str(run_dir))
+    res = _generate_hannum_gene_report(gene_query, output_dir=str(run_dir))
+    # Underlying function returns a dict with 'report_file'; support both dict and str for robustness
+    path: Optional[str] = None  # type: ignore[assignment]
+    if isinstance(res, str):
+        path = res
+    elif isinstance(res, dict):
+        path = res.get("report_file")  # type: ignore[assignment]
     if not path or not Path(path).exists():
         return f"Hannum report failed for {gene_query}."
     _register_artifact(path, type="txt", label=f"Hannum_{gene_query}")
@@ -465,10 +471,16 @@ def fetch_and_extract_hpa(query: Annotated[str, "Gene"], output_dir: Annotated[s
 def get_gene_variants_excel(gene: Annotated[str, "Gene"], output_file: Annotated[str, "Output Excel"] = "variants.xlsx") -> str:
     run_dir = _get_run_dir()
     out = _ensure_unique_path(str(run_dir / Path(output_file).name))
-    res = _get_gene_variants_excel(gene, str(out))
-    if isinstance(res, str) and Path(res).exists():
-        _register_artifact(res, type="xlsx", label=f"variants_{gene}")
-    return res
+    # The underlying tool signature is (query, output_dir, output_excel=None) and returns a DataFrame,
+    # so pass our desired file as output_excel and the parent as output_dir.
+    try:
+        _get_gene_variants_excel(gene, str(Path(out).parent), output_excel=str(out))
+    except Exception as e:
+        return f"Variant export failed: {e}"
+    if Path(out).exists():
+        _register_artifact(str(out), type="xlsx", label=f"variants_{gene}")
+        return str(out)
+    return "Variant export failed: no file produced"
 
 
 @function_tool
@@ -557,9 +569,9 @@ def artifacts_read_text(id_or_path: Annotated[str, "Artifact id/label or absolut
         rp = candidate.resolve()
     except Exception:
         return "Invalid path."
-    # Constrain to outputs root
-    outputs_root = Path(__file__).resolve().parents[2] / "outputs"
+    # Constrain to outputs root using current run_dir parent (matches server's configured outputs root)
     try:
+        outputs_root = _get_run_dir().resolve().parent
         rp.relative_to(outputs_root.resolve())
     except Exception:
         return "Access denied: path is outside outputs directory."

@@ -20,7 +20,7 @@ import requests
 
 
 BASE_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
-HEADERS = {"User-Agent": "ScholarBot/1.0 (longevity-knowledge-base)"}
+HEADERS = {"User-Agent": "LongevityKB/1.0 (https://github.com/davidzheglov/longevity-knowledge-base)"}
 
 
 def _safe_name(name: str) -> str:
@@ -55,11 +55,12 @@ def fetch_articles_structured(
             "query": query,
             "offset": offset,
             "limit": limit,
-            "fields": "title,authors,abstract,openAccessPdf,url,year,venue",
+            "fields": "title,authors,abstract,openAccessPdf,url,year,venue,externalIds",
         }
         try:
-            resp = requests.get(BASE_URL, params=params, headers=HEADERS, timeout=15)
+            resp = requests.get(BASE_URL, params=params, headers=HEADERS, timeout=20)
             if resp.status_code == 429:
+                time.sleep(5)
                 break
             resp.raise_for_status()
             data = resp.json()
@@ -81,12 +82,14 @@ def fetch_articles_structured(
             authors = ", ".join([a.get("name", "") for a in (paper.get("authors") or [])][:3])
             year = paper.get("year", "N/A")
             venue = paper.get("venue", "N/A")
+            ext = (paper.get("externalIds") or {})
+            doi = ext.get("DOI")
 
             base_fn = re.sub(r"[^\w\-_.]", "_", title[:60])
             txt_path = txt_dir / f"{total_checked:03d}_{base_fn}.txt"
             txt_path.write_text(
                 f"Title: {title}\nAuthors: {authors}\nYear: {year}\nVenue: {venue}\n"
-                f"Publisher URL: {publisher_url}\nOpenAccess PDF URL: {pdf_url or 'N/A'}\n\n"
+                f"DOI: {doi or 'N/A'}\nPublisher URL: {publisher_url}\nOpenAccess PDF URL: {pdf_url or 'N/A'}\n\n"
                 f"Abstract:\n{abstract}\n",
                 encoding="utf-8",
             )
@@ -94,16 +97,26 @@ def fetch_articles_structured(
             if not pdf_url:
                 continue
             try:
-                pr = requests.get(pdf_url, timeout=20, stream=True)
+                pr = requests.get(pdf_url, timeout=30, stream=True, headers=HEADERS)
                 if pr.status_code != 200:
                     continue
-                head = pr.raw.read(10)
-                if b"%PDF" in head:
-                    pdf_path = pdf_dir / f"{total_checked:03d}_{base_fn}.pdf"
-                    with pdf_path.open("wb") as f:
-                        f.write(head)
-                        f.write(pr.raw.read())
+                content_type = pr.headers.get("Content-Type", "").lower()
+                pdf_path = pdf_dir / f"{total_checked:03d}_{base_fn}.pdf"
+                # Read in chunks and also detect PDF via first chunk
+                first_chunk = b""
+                with pdf_path.open("wb") as f:
+                    for chunk in pr.iter_content(chunk_size=8192):
+                        if not chunk:
+                            continue
+                        if not first_chunk:
+                            first_chunk = chunk[:10]
+                        f.write(chunk)
+                if ("application/pdf" in content_type) or (b"%PDF" in first_chunk):
                     pdf_count += 1
+                else:
+                    # Not a PDF; remove file
+                    try: pdf_path.unlink()
+                    except Exception: pass
             except Exception:
                 pass
             time.sleep(0.5)
@@ -140,12 +153,13 @@ def fetch_articles_detailed_log(
                 "query": query,
                 "offset": offset,
                 "limit": limit,
-                "fields": "title,authors,abstract,openAccessPdf,url,year,venue",
+                "fields": "title,authors,abstract,openAccessPdf,url,year,venue,externalIds",
             }
             try:
-                resp = requests.get(BASE_URL, params=params, headers=HEADERS, timeout=15)
+                resp = requests.get(BASE_URL, params=params, headers=HEADERS, timeout=20)
                 if resp.status_code == 429:
-                    lg.write("Rate limited (429). Aborting.\n")
+                    lg.write("Rate limited (429). Backing off.\n")
+                    time.sleep(5)
                     break
                 resp.raise_for_status()
                 data = resp.json()
@@ -164,31 +178,42 @@ def fetch_articles_detailed_log(
                 oa = paper.get("openAccessPdf") or {}
                 pdf_url = oa.get("url")
                 authors = ", ".join([a.get("name", "") for a in (paper.get("authors") or [])][:3])
+                ext = (paper.get("externalIds") or {})
+                doi = ext.get("DOI")
                 log_prefix = f"[{total_checked:03d}] {title} | Authors: {authors}"
 
                 base_fn = re.sub(r"[^\w\-_.]", "_", title[:60])
                 txt_path = base / f"{total_checked:03d}_{base_fn}.txt"
                 with txt_path.open("w", encoding="utf-8") as f:
                     f.write(json.dumps(paper, ensure_ascii=False, indent=2))
+                    if doi:
+                        f.write(f"\n\nDOI: {doi}\n")
 
                 if not pdf_url:
                     lg.write(f"{log_prefix} -> No open-access PDF\n")
                     continue
 
                 try:
-                    pr = requests.get(pdf_url, timeout=20, stream=True)
+                    pr = requests.get(pdf_url, timeout=30, stream=True, headers=HEADERS)
                     if pr.status_code != 200:
                         lg.write(f"{log_prefix} -> PDF HTTP {pr.status_code}\n")
                         continue
-                    head = pr.raw.read(10)
-                    if b"%PDF" in head:
-                        pdf_path = base / f"{total_checked:03d}_{base_fn}.pdf"
-                        with pdf_path.open("wb") as f:
-                            f.write(head)
-                            f.write(pr.raw.read())
+                    content_type = pr.headers.get("Content-Type", "").lower()
+                    pdf_path = base / f"{total_checked:03d}_{base_fn}.pdf"
+                    first_chunk = b""
+                    with pdf_path.open("wb") as f:
+                        for chunk in pr.iter_content(chunk_size=8192):
+                            if not chunk:
+                                continue
+                            if not first_chunk:
+                                first_chunk = chunk[:10]
+                            f.write(chunk)
+                    if ("application/pdf" in content_type) or (b"%PDF" in first_chunk):
                         pdf_count += 1
                         lg.write(f"{log_prefix} -> PDF #{pdf_count} saved\n")
                     else:
+                        try: pdf_path.unlink()
+                        except Exception: pass
                         lg.write(f"{log_prefix} -> Not a PDF response\n")
                 except Exception as e:
                     lg.write(f"{log_prefix} -> Error: {e}\n")

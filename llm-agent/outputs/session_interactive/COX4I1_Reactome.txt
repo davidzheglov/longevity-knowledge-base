@@ -1,5 +1,0 @@
-R-HSA-5628897: TP53 Regulates Metabolic Genes
-R-HSA-611105: Respiratory electron transport
-R-HSA-9707564: Cytoprotection by HMOX1
-R-HSA-9837999: Mitochondrial protein degradation
-R-HSA-9864848: Complex IV assembly

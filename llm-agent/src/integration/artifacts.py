@@ -30,8 +30,13 @@ def _now() -> float:
 def get_run_dir() -> Path:
     rd = _SESSION.get("run_dir")
     if rd is None:
-        # Default to outputs/session_<timestamp>
-        base = Path(__file__).resolve().parents[2] / "outputs"
+        # Default to outputs/session_<timestamp>; prefer env var to stay consistent with server
+        base_env = os.getenv("AGENT_OUTPUT_DIR")
+        if base_env:
+            base = Path(base_env)
+        else:
+            # Align with server default: parents[3] == /app when this file is under /app/llm-agent/src/integration
+            base = Path(__file__).resolve().parents[3] / "outputs"
         base.mkdir(parents=True, exist_ok=True)
         rd = base / f"session_{int(_now())}"
         rd.mkdir(parents=True, exist_ok=True)
@@ -41,7 +46,11 @@ def get_run_dir() -> Path:
 
 
 def start_session(run_dir: Optional[str] = None, label: Optional[str] = None) -> Path:
-    base = Path(__file__).resolve().parents[2] / "outputs"
+    base_env = os.getenv("AGENT_OUTPUT_DIR")
+    if base_env:
+        base = Path(base_env)
+    else:
+        base = Path(__file__).resolve().parents[3] / "outputs"
     base.mkdir(parents=True, exist_ok=True)
     if run_dir:
         rd = Path(run_dir)

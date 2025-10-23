@@ -180,11 +180,11 @@ class LongevityAgent:
             "### Mutation Impact Prediction\n"
             "For ‘How will this mutation affect the protein?’: run generate_comprehensive_prediction(protein_name, mutations) to automate: find_uniprot → apply_protein_mutations → compare_solubility_and_pI. Additionally, always check functional domains (get_uniprot_features) and existing human variation (get_gene_variants_excel). Summarize all outputs and clearly state this is a preliminary computational assessment, not a definitive biological conclusion.\n\n"
             "### Literature\n"
-            "Use fetch_articles_structured or fetch_articles_detailed_log to gather PDFs and metadata for evidence.\n\n"
+            "When making factual claims or drawing conclusions, attempt to cite 1–3 relevant primary papers. Use fetch_articles_structured or fetch_articles_detailed_log to gather PDFs and metadata when needed. Prefer concise in‑text citations like (Author et al., YEAR) with a short 'References' section listing title and a URL. Use artifacts_read_text to quote short excerpts from downloaded metadata or PDFs.\n\n"
             "### Operational constraints\n"
             "Heavy steps like full AlphaFold structure prediction may be unavailable by default in this environment. If a heavy step is not configured, gracefully skip it and explicitly note that it was skipped. smart_visualize relies on a CDN for 3Dmol.js.\n\n"
             "### Output requirements (strict)\n"
-            "Respond in Markdown only; begin with a TL;DR (2–4 bullets). Use clear section headers (## Key findings, ## Evidence, ## What I did, ## Next steps). Prefer short paragraphs and bullet lists. If tools ran, list them with their output filenames. Don’t dump entire files—use artifacts_read_text to quote small excerpts. Be concise, correct, and avoid redundancy."
+            "Respond in Markdown only; begin with a TL;DR (2–4 bullets). Use clear section headers (## Key findings, ## Evidence, ## What I did, ## References, ## Next steps). Prefer short paragraphs and bullet lists. If tools ran, list them with their output filenames. Don’t dump entire files—use artifacts_read_text to quote small excerpts. Where possible, include direct references to papers (title + URL) and cite them inline. Be concise, correct, and avoid redundancy."
         )
 
         self.conversation_history.append({
@@ -376,7 +376,7 @@ class LongevityAgent:
         # Default: pass through
         return a
     
-    def chat(self, user_message: str, max_iterations: Optional[int] = None) -> str:
+    def chat(self, user_message: str, max_iterations: Optional[int] = None, pre_messages: Optional[List[Dict[str, Any]]] = None) -> str:
         """
         Send a message to the agent and get a response.
         
@@ -389,7 +389,23 @@ class LongevityAgent:
         Returns:
             Agent's text response
         """
-        # Add user message to history
+        # If upstream provided prior turns, seed them explicitly (avoids stuffing context into one user message)
+        if pre_messages and isinstance(pre_messages, list):
+            # Reset to system prompt only; server typically calls reset() per HTTP request, but be explicit here
+            self.conversation_history = [{
+                "role": "system",
+                "content": self.system_prompt
+            }]
+            for m in pre_messages:
+                try:
+                    role = m.get("role")  # type: ignore[assignment]
+                    content = m.get("content")  # type: ignore[assignment]
+                except Exception:
+                    continue
+                if role in ("user", "assistant") and isinstance(content, str) and content.strip():
+                    self.conversation_history.append({"role": role, "content": content})
+
+        # Add current user message at the end
         self.conversation_history.append({
             "role": "user",
             "content": user_message

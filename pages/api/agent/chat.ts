@@ -37,6 +37,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(502).json({ error: 'agent_bad_gateway', detail: txt.slice(0,1000) });
     }
     const data = await r.json();
+    // Rewrite artifact URLs to go through our web proxy so the browser doesn't need to reach `agent` directly
+    try{
+      const AGENT_API_URL_N = new URL(`${AGENT_API_URL}`);
+      if (Array.isArray(data?.artifacts)){
+        data.artifacts = data.artifacts.map((a:any)=>{
+          const out = { ...(a||{}) };
+          const u = String(a?.url || '');
+          try{
+            const parsed = new URL(u);
+            const isAgent = (parsed.host === AGENT_API_URL_N.host);
+            const isOutputs = parsed.pathname.startsWith('/outputs/');
+            if (isAgent && isOutputs){
+              out.url = `/api/agent/file?u=${encodeURIComponent(u)}`;
+            }
+          }catch(e){/* ignore bad URL */}
+          return out;
+        });
+      }
+    }catch(e){/* ignore rewrite errors */}
     console.log('[api/agent/chat] ← agent OK', {
       hasOutput: typeof data?.output === 'string',
       artifacts: Array.isArray(data?.artifacts) ? data.artifacts.length : 0

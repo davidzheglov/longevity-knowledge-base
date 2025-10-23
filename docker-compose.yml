@@ -7,9 +7,14 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - HOST=0.0.0.0
       - PORT=8000
+      - AGENT_OUTPUT_DIR=/app/outputs
+      - AGENT_DATA_DIR=/app/llm-agent/data
     volumes:
-      - ./llm-agent/outputs:/app/llm-agent/outputs
+      # Mount outputs to /app/outputs as expected by server default
+      - ./llm-agent/outputs:/app/outputs
+      # Mount data to both possible lookup locations for robustness
       - ./llm-agent/data:/app/llm-agent/data:ro
+      - ./llm-agent/data:/app/data:ro
     ports:
       - "8000:8000"
 
