@@ -1,0 +1,23 @@
+Gene: COX4I1
+UniProt Accession: P13073
+============================================================
+
+## Molecular Function
+GO:0004129: cytochrome-c oxidase activity
+
+## Biological Process
+GO:0045333: cellular respiration
+GO:0006091: generation of precursor metabolites and energy
+GO:0006123: mitochondrial electron transport, cytochrome c to oxygen
+GO:0007584: response to nutrient
+
+## Cellular Component
+GO:0005829: cytosol
+GO:0016020: membrane
+GO:0005743: mitochondrial inner membrane
+GO:0005758: mitochondrial intermembrane space
+GO:0031966: mitochondrial membrane
+GO:0005739: mitochondrion
+GO:0005654: nucleoplasm
+GO:0045277: respiratory chain complex IV
+

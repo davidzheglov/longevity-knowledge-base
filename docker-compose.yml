@@ -1,0 +1,35 @@
+services:
+  agent:
+    build:
+      context: ./llm-agent
+      dockerfile: Dockerfile
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HOST=0.0.0.0
+      - PORT=8000
+      - AGENT_OUTPUT_DIR=/app/outputs
+      - AGENT_DATA_DIR=/app/llm-agent/data
+    volumes:
+      # Mount outputs to /app/outputs as expected by server default
+      - ./llm-agent/outputs:/app/outputs
+      # Mount data to both possible lookup locations for robustness
+      - ./llm-agent/data:/app/llm-agent/data:ro
+      - ./llm-agent/data:/app/data:ro
+    ports:
+      - "8000:8000"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - AGENT_API_URL=http://agent:8000
+      # SQLite DB inside container; Prisma uses this at runtime
+      - DATABASE_URL=file:/app/dev.db
+      # Optional: extend FE proxy timeout to agent (ms)
+      - NEXT_AGENT_TIMEOUT_MS=120000
+    ports:
+      - "8080:3000"
+    depends_on:
+      - agent
